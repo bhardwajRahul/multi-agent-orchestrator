@@ -203,8 +203,8 @@ class BedrockLLMAgent(Agent):
 
             # Extract thinking content if present in the response
             for content_item in llm_response.content:
-                if isinstance(content_item, dict) and "thinking" in content_item:
-                    accumulated_thinking = content_item["thinking"]
+                if isinstance(content_item, dict) and "reasoningContent" in content_item:
+                    accumulated_thinking = content_item["reasoningContent"]
                     break
 
             conversation.append(llm_response)
@@ -246,11 +246,6 @@ class BedrockLLMAgent(Agent):
 
                 async for chunk in response:
                     if isinstance(chunk, AgentStreamResponse):
-                        # Accumulate thinking if available
-                        if chunk.thinking:
-                            accumulated_thinking += chunk.thinking
-
-                        # Pass along all chunks to client
                         yield chunk
 
                         if chunk.final_message:
@@ -268,27 +263,6 @@ class BedrockLLMAgent(Agent):
                     command["messages"] = conversation_to_dict(conversation)
                 else:
                     continue_with_tools = False
-
-                    # Only yield a new response with thinking if we haven't already included it
-                    if accumulated_thinking and not any("thinking" in content for content in final_response.content):
-                        # Create new content list with thinking included
-                        content_list = []
-
-                        # Copy existing content
-                        for content_item in final_response.content:
-                            content_list.append(content_item)
-
-                        # Add thinking
-                        content_list.append({"thinking": accumulated_thinking})
-
-                        # Create updated final message
-                        updated_final = ConversationMessage(
-                            role=ParticipantRole.ASSISTANT.value,
-                            content=content_list
-                        )
-
-                        # Replace the last message in conversation
-                        conversation[-1] = updated_final
 
                 max_recursions -= 1
 
@@ -413,8 +387,18 @@ class BedrockLLMAgent(Agent):
                 if isinstance(item, dict) and "text" in item:
                     content.append(item)
 
-            # Add thinking to content if available
-            if thinking_content:
+            toolInUse=True
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "toolUse" in item:
+                    content.append(item)
+                    toolInUse = True
+
+            # when a tool is used, the next iteration should have the reasoningContent at the first location
+            if toolInUse:
+                if thinking_content:
+                    content.insert(0,{"reasoningContent": thinking_content})
+            else:
                 content.append({"reasoningContent": thinking_content})
 
             kwargs = {
@@ -504,7 +488,6 @@ class BedrockLLMAgent(Agent):
                     elif "reasoningContent" in delta:
                         if "text" in delta["reasoningContent"]:
                             thinking_text = delta["reasoningContent"]["text"]
-                            thinking += thinking_text
                             accumulated_thinking += thinking_text
                             token_kwargs = {
                                 "token": thinking_text,
@@ -528,15 +511,35 @@ class BedrockLLMAgent(Agent):
                 elif "metadata" in chunk:
                     metadata = chunk.get("metadata")
 
-            # If we have thinking content, add it to the final content
-            if accumulated_thinking:
-                content.append({"reasoningContent": {"reasoningText": {"text": accumulated_thinking, "signature":thinking_signature}}})
+            # Get content from response and filter for text items
+            response_content = message["content"]
+            _content = []
 
-            final_message = ConversationMessage(role=ParticipantRole.ASSISTANT.value, content=message["content"])
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "text" in item:
+                    _content.append(item)
+
+            toolInUse=True
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "toolUse" in item:
+                    _content.append(item)
+                    toolInUse = True
+
+            # when a tool is used, the next iteration should have the reasoningContent at the first index
+            if toolInUse:
+                if accumulated_thinking:
+                    _content.insert(0,{"reasoningContent": {"reasoningText": {"text": accumulated_thinking, "signature":thinking_signature}}})
+            else:
+                _content.append({"reasoningContent": {"reasoningText": {"text": accumulated_thinking, "signature":thinking_signature}}})
+
+
+            final_message = ConversationMessage(role=ParticipantRole.ASSISTANT.value, content=_content)
 
             kwargs = {
                 "name": self.name,
-                "output": message["content"],
+                "output": _content,
                 "usage": metadata.get("usage"),
                 "system": converse_input.get("system")[0].get("text"),
                 "input": converse_input,
