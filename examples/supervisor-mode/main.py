@@ -13,7 +13,8 @@ from agent_squad.agents import (
     LexBotAgent, LexBotAgentOptions,
     AmazonBedrockAgent, AmazonBedrockAgentOptions,
     SupervisorAgent, SupervisorAgentOptions,
-    AgentStreamResponse
+    AgentStreamResponse,
+    AgentCallbacks,
 )
 from agent_squad.classifiers import ClassifierResult
 from agent_squad.types import ConversationMessage
@@ -31,6 +32,12 @@ from weather_tool import weather_tool_description, weather_tool_handler, weather
 from dotenv import load_dotenv
 
 load_dotenv()
+
+class LLMAgentCallbacks(AgentCallbacks):
+    async def on_llm_new_token(self, token: str, **kwargs) -> None:
+        # handle response streaming here
+        if 'thinking' in kwargs:
+            print(f"\033[31m{token}\033[0m", end='', flush=True)
 
 class SupervisorToolsCallbacks (AgentToolCallbacks):
     async def on_tool_start(
@@ -89,13 +96,25 @@ claim_agent = AmazonBedrockAgent(AmazonBedrockAgentOptions(
 
 weather_agent = BedrockLLMAgent(BedrockLLMAgentOptions(
         name="WeatherAgent",
-        streaming=False,
+        streaming=True,
+        model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
         description="Specialized agent for giving weather forecast condition from a city.",
         tool_config={
             'tool':weather_tool_description,
             'toolMaxRecursions': 5,
             'useToolHandler': weather_tool_handler
-        }
+        },
+        inference_config={
+            "temperature":1.0,
+            "maxTokens": 4096
+        },
+        additional_model_request_fields={
+            "thinking": {
+                "type": "enabled",
+                "budget_tokens": 4000
+            }
+        },
+        callbacks=LLMAgentCallbacks()
     ))
 weather_agent.set_system_prompt(weather_tool_prompt)
 
@@ -123,14 +142,37 @@ if _ANTHROPIC_AVAILABLE:
     lead_agent = AnthropicAgent(AnthropicAgentOptions(
         api_key=os.getenv('ANTHROPIC_API_KEY', None),
         name="SupervisorAgent",
+        model_id="claude-3-7-sonnet-20250219",
         description="You are a supervisor agent. You are responsible for managing the flow of the conversation. You are only allowed to manage the flow of the conversation. You are not allowed to answer questions about anything else.",
-        model_id="claude-3-5-sonnet-latest",
-        streaming=True
+        streaming=True,
+        inference_config={
+            "maxTokens": 4096,
+            "temperature":1.0,
+            "topP":1.0
+        }
+        ,
+        additional_model_request_fields = {
+            "thinking": {
+                "type": "enabled",
+                "budget_tokens": 4000
+            }
+        }
     ))
 else:
     lead_agent = BedrockLLMAgent(BedrockLLMAgentOptions(
         name="SupervisorAgent",
-        model_id="amazon.nova-pro-v1:0",
+        model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        streaming=True,
+        inference_config={
+            "temperature":1.0,
+            "maxTokens": 4096
+        },
+        additional_model_request_fields={
+            "thinking": {
+                "type": "enabled",
+                "budget_tokens": 4000
+            }
+        },
         description="You are a supervisor agent. You are responsible for managing the flow of the conversation. You are only allowed to manage the flow of the conversation. You are not allowed to answer questions about anything else.",
     ))
 
@@ -178,8 +220,8 @@ async def handle_request(_orchestrator: AgentSquad, _user_input:str, _user_id:st
             async for chunk in response.output:
                 if isinstance(chunk, AgentStreamResponse):
                     print(f"\033[34m{chunk.text}\033[0m", end='', flush=True)
-                else:
-                    print(f"\033[34m{chunk}\033[0m", end='', flush=True)
+                    if chunk.thinking:
+                        print(f"\033[31m{chunk.thinking}\033[0m", end='', flush=True)
 
 
 if __name__ == "__main__":
