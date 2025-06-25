@@ -13,7 +13,7 @@ from agent_squad.retrievers import Retriever
 class AnthropicAgentOptions(AgentOptions):
     """
     Configuration options for the Anthropic agent.
-    
+
     Attributes:
         api_key: Anthropic API key.
         client: Optional pre-configured Anthropic client instance.
@@ -75,7 +75,8 @@ class AnthropicAgent(Agent):
             self.inference_config = default_inference_config
 
         # Initialize additional_model_request_fields
-        self.additional_model_request_fields = options.additional_model_request_fields or {}
+        self.additional_model_request_fields: Optional[dict[str, Any]] = options.additional_model_request_fields or {}
+
         self.retriever = options.retriever
         self.tool_config: Optional[dict[str, Any]] = options.tool_config
 
@@ -151,12 +152,12 @@ class AnthropicAgent(Agent):
     def _build_input(self, messages: list[Any], system_prompt: str) -> dict:
         """
         Build the conversation command with all necessary configurations.
-        
+
         This method constructs the input dictionary for the Anthropic API call, including:
         - Core parameters (model, tokens, temperature, etc.)
         - Additional model request fields from options.additional_model_request_fields
         - Tool configuration if provided
-        
+
         Returns:
             dict: The complete input configuration for the API call
         """
@@ -169,7 +170,7 @@ class AnthropicAgent(Agent):
             "top_p": self.inference_config.get("topP"),
             "stop_sequences": self.inference_config.get("stopSequences"),
         }
-        
+
         # Add any additional model request fields
         if self.additional_model_request_fields:
             for key, value in self.additional_model_request_fields.items():
@@ -229,16 +230,16 @@ class AnthropicAgent(Agent):
 
                     # Create content list with text from final_response
                     content_list = []
-                    
+
                     # Add text content, filter out empty items
                     for content in final_response.content:
                         if hasattr(content, 'text') and content.text:
                             content_list.append({"text": content.text})
-                    
+
                     # Add thinking to the content if it exists
                     if accumulated_thinking:
                         content_list.append({"thinking": accumulated_thinking})
-                    
+
                     yield AgentStreamResponse(
                         final_message=ConversationMessage(
                             role=ParticipantRole.ASSISTANT.value,
@@ -382,21 +383,12 @@ class AnthropicAgent(Agent):
                     elif event.type == "text":
                         await self.callbacks.on_llm_new_token(event.text)
                         yield AgentStreamResponse(text=event.text)
-                    elif event.type == "content_block_delta":
-                        if hasattr(event.delta, 'text'):
-                            await self.callbacks.on_llm_new_token(event.delta.text)
-                            yield AgentStreamResponse(text=event.delta.text)
                     elif event.type == "content_block_stop":
                         pass
-                    # Handle any other event types we might be missing
-                    else:
-                        if hasattr(event, 'text'):
-                            await self.callbacks.on_llm_new_token(event.text)
-                            yield AgentStreamResponse(text=event.text)
 
                 # Get the accumulated final message after consuming the stream
                 accumulated: Message = await stream.get_final_message()
-            
+
             # We need to yield the whole content to keep the tool use block
             # This should be a single yield with the final message
             yield AgentStreamResponse(
