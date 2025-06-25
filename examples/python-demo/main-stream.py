@@ -15,8 +15,10 @@ from agent_squad.agents import (BedrockLLMAgent,
                         AgentStreamResponse,
                         AgentCallbacks)
 from agent_squad.types import ConversationMessage, ParticipantRole
-from agent_squad.utils import AgentTool, AgentTools, AgentToolCallbacks
+from agent_squad.utils import AgentToolCallbacks
+from dotenv import load_dotenv
 
+load_dotenv()
 class LLMAgentCallbacks(AgentCallbacks):
     async def on_agent_start(
         self,
@@ -106,7 +108,7 @@ async def handle_request(_orchestrator: AgentSquad, _user_input:str, _user_id:st
             if isinstance(chunk, AgentStreamResponse):
                 if response.streaming:
                     if (chunk.thinking):
-                        print(chunk.thinking, end='', flush=True)
+                        print(f"\033[34m{chunk.thinking}\033[0m", end='', flush=True)
                     elif (chunk.text):
                         print(chunk.text, end='', flush=True)
     else:
@@ -194,14 +196,27 @@ if __name__ == "__main__":
 
     # Add a Anthropic weather agent with a tool in anthropic's tool format
     # weather_agent = AnthropicAgent(AnthropicAgentOptions(
-    #     api_key='api-key',
+    #     api_key=os.getenv('ANTHROPIC_API_KEY', None),
     #     name="Weather Agent",
-    #     streaming=False,
+    #     streaming=True,
+    #     model_id="claude-3-7-sonnet-20250219",
     #     description="Specialized agent for giving weather condition from a city.",
     #     tool_config={
     #         'tool': [tool.to_claude_format() for tool in weather_tool.weather_tools.tools],
     #         'toolMaxRecursions': 5,
     #         'useToolHandler': weather_tool.anthropic_weather_tool_handler
+    #     },
+    #     inference_config={
+    #         "maxTokens": 4096,
+    #         "temperature":1.0,
+    #         "topP":1.0
+    #     }
+    #     ,
+    #     additional_model_request_fields = {
+    #         "thinking": {
+    #             "type": "enabled",
+    #             "budget_tokens": 4000
+    #         }
     #     },
     #     callbacks=LLMAgentCallbacks()
     # ))
@@ -234,13 +249,24 @@ if __name__ == "__main__":
     # Add a Bedrock weather agent with custom handler and bedrock's tool format
     weather_agent = BedrockLLMAgent(BedrockLLMAgentOptions(
         name="Weather Agent",
-        streaming=False,
+        streaming=True,
+        model_id="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
         description="Specialized agent for giving weather condition from a city.",
         tool_config={
             'tool': [tool.to_bedrock_format() for tool in weather_tool.weather_tools.tools],
             'toolMaxRecursions': 5,
             'useToolHandler': weather_tool.bedrock_weather_tool_handler
-        }
+        },
+        additional_model_request_fields={
+            "thinking": {
+                "type": "enabled",
+                "budget_tokens": 4000
+            }
+        },
+        inference_config={
+            "maxTokens": 4096,
+            "temperature":1.0
+        },
     ))
 
 
