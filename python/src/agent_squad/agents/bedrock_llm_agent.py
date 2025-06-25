@@ -200,13 +200,13 @@ class BedrockLLMAgent(Agent):
 
         while continue_with_tools and max_recursions > 0:
             llm_response = await self.handle_single_response(command, agent_tracking_info)
-            
+
             # Extract thinking content if present in the response
             for content_item in llm_response.content:
                 if isinstance(content_item, dict) and "thinking" in content_item:
                     accumulated_thinking = content_item["thinking"]
                     break
-                    
+
             conversation.append(llm_response)
 
             if any("toolUse" in content for content in llm_response.content):
@@ -249,10 +249,10 @@ class BedrockLLMAgent(Agent):
                         # Accumulate thinking if available
                         if chunk.thinking:
                             accumulated_thinking += chunk.thinking
-                        
+
                         # Pass along all chunks to client
                         yield chunk
-                        
+
                         if chunk.final_message:
                             final_response = chunk.final_message
                             # Capture final thinking if available
@@ -268,25 +268,25 @@ class BedrockLLMAgent(Agent):
                     command["messages"] = conversation_to_dict(conversation)
                 else:
                     continue_with_tools = False
-                    
+
                     # Only yield a new response with thinking if we haven't already included it
                     if accumulated_thinking and not any("thinking" in content for content in final_response.content):
                         # Create new content list with thinking included
                         content_list = []
-                        
+
                         # Copy existing content
                         for content_item in final_response.content:
                             content_list.append(content_item)
-                            
+
                         # Add thinking
                         content_list.append({"thinking": accumulated_thinking})
-                        
+
                         # Create updated final message
                         updated_final = ConversationMessage(
                             role=ParticipantRole.ASSISTANT.value,
                             content=content_list
                         )
-                        
+
                         # Replace the last message in conversation
                         conversation[-1] = updated_final
 
@@ -397,19 +397,25 @@ class BedrockLLMAgent(Agent):
             response = self.client.converse(**converse_input)
             if "output" not in response:
                 raise ValueError("No output received from Bedrock model")
-                
+
             # Extract thinking content if available
             thinking_content = None
-            if "additionalResponseFields" in response:
-                if "reasoning" in response["additionalResponseFields"]:
-                    thinking_content = response["additionalResponseFields"]["reasoning"]
-            
-            # Get content from response
-            content = response["output"]["message"]["content"]
-            
+            if "reasoningContent" in response["output"]["message"]["content"][0]:
+                if "reasoningText" in response["output"]["message"]["content"][0]["reasoningContent"]:
+                    thinking_content = response["output"]["message"]["content"][0]["reasoningContent"]
+
+            # Get content from response and filter for text items
+            response_content = response["output"]["message"]["content"]
+            content = []
+
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "text" in item:
+                    content.append(item)
+
             # Add thinking to content if available
             if thinking_content:
-                content.append({"thinking": thinking_content})
+                content.append({"reasoningContent": thinking_content})
 
             kwargs = {
                 "name": self.name,
@@ -439,7 +445,7 @@ class BedrockLLMAgent(Agent):
         """
         Handle streaming response from Bedrock model.
         Yields StreamChunk objects containing text chunks, thinking content, or the final message.
-        
+
         When thinking is enabled through additional_model_request_fields, this method will:
         1. Process "reasoningContent" events as thinking content
         2. Accumulate thinking content throughout the streaming process
@@ -468,6 +474,7 @@ class BedrockLLMAgent(Agent):
             content = []
             message["content"] = content
             text = ""
+            thinking_signature = {}
             thinking = ""
             accumulated_thinking = ""  # Add this for complete thinking content
             tool_use = {}
@@ -507,21 +514,24 @@ class BedrockLLMAgent(Agent):
                             await self.callbacks.on_llm_new_token(**token_kwargs)
                             # yield with thinking field instead of text
                             yield AgentStreamResponse(thinking=thinking_text)
+                        elif "signature" in delta["reasoningContent"]:
+                            thinking_signature = delta["reasoningContent"]["signature"]
                 elif "contentBlockStop" in chunk:
                     if "input" in tool_use and tool_use.get("input"):
                         tool_use["input"] = json.loads(tool_use["input"])
                         content.append({"toolUse": tool_use})
                         tool_use = {}
                     else:
-                        content.append({"text": text})
-                        text = ""
+                        if text:
+                            content.append({"text": text})
+                            text = ""
                 elif "metadata" in chunk:
                     metadata = chunk.get("metadata")
 
             # If we have thinking content, add it to the final content
             if accumulated_thinking:
-                content.append({"thinking": accumulated_thinking})
-                
+                content.append({"reasoningContent": {"reasoningText": {"text": accumulated_thinking, "signature":thinking_signature}}})
+
             final_message = ConversationMessage(role=ParticipantRole.ASSISTANT.value, content=message["content"])
 
             kwargs = {
