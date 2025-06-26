@@ -13,7 +13,7 @@ export class AccumulatorTransform extends Transform {
     }
 
     _transform(chunk: any, encoding: string, callback: TransformCallback): void {
-      const text = this.extractTextFromChunk(chunk);
+      const text = this.extractFromChunk(chunk);
       if (text) {
         this.accumulator += text;
         this.push(text);  // Push the text, not the original chunk
@@ -21,11 +21,13 @@ export class AccumulatorTransform extends Transform {
       callback();
     }
 
-    extractTextFromChunk(chunk: any): string | null {
+    extractFromChunk(chunk: any): string | null | any {
       if (typeof chunk === 'string') {
         return chunk;
       } else if (chunk.contentBlockDelta?.delta?.text) {
         return chunk.contentBlockDelta.delta.text;
+      } else if (chunk.thinking) {
+        return chunk;
       }
       // Add more conditions here if there are other possible structures
       return null;

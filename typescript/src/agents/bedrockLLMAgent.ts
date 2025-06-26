@@ -416,17 +416,17 @@ export class BedrockLLMAgent extends Agent {
     }
   }
 
-  private async *handleStreamingResponse(input: any): AsyncIterable<string> {
+  private async *handleStreamingResponse(input: any): AsyncIterable<string | any> {
     let toolBlock: any = { toolUseId: "", input: {}, name: "" };
     let inputString = "";
     let toolUse = false;
-    let recursions =
-      this.toolConfig?.toolMaxRecursions || this.defaultMaxRecursions;
-
+    let recursions = this.toolConfig?.toolMaxRecursions || this.defaultMaxRecursions;
     try {
       do {
         const command = new ConverseStreamCommand(input);
         const response = await this.client.send(command);
+        let reasoningContent = null;
+        let accumulatedThinking = '';
         if (!response.stream) {
           throw new Error("No stream received from Bedrock model");
         }
@@ -438,20 +438,36 @@ export class BedrockLLMAgent extends Agent {
           ) {
             yield chunk.contentBlockDelta.delta.text;
           } else if (chunk.contentBlockDelta?.delta?.reasoningContent?.text) {
-            yield JSON.stringify({
+            const thinking = {
               thinking: true,
               content: chunk.contentBlockDelta.delta.reasoningContent.text,
-            });
-          } else if (chunk.contentBlockStart?.start?.toolUse) {
+            };
+            accumulatedThinking += chunk.contentBlockDelta.delta.reasoningContent.text;
+            yield thinking;
+          }
+          else if (chunk.contentBlockDelta?.delta?.reasoningContent?.signature) {
+            reasoningContent = {
+              reasoningText:
+              {
+                text: accumulatedThinking,
+                signature:chunk.contentBlockDelta.delta.reasoningContent.signature
+              }
+            }
+          }
+          else if (chunk.contentBlockStart?.start?.toolUse) {
             toolBlock = chunk.contentBlockStart?.start?.toolUse;
           } else if (chunk.contentBlockDelta?.delta?.toolUse) {
             inputString += chunk.contentBlockDelta.delta.toolUse.input;
           } else if (chunk.messageStop?.stopReason === "tool_use") {
             toolBlock.input = JSON.parse(inputString);
-            const message = {
-              role: ParticipantRole.ASSISTANT,
-              content: [{ toolUse: toolBlock }],
-            };
+            let message = {
+                role: ParticipantRole.ASSISTANT,
+                content: [],
+              };
+            if (reasoningContent){
+              message.content.push({reasoningContent:reasoningContent});
+            }
+            message.content.push({ toolUse: toolBlock })
             input.messages.push(message);
 
             const tools = this.toolConfig.tool;
