@@ -8,4 +8,4 @@ pytest-asyncio
 openai
 libsql-client
 ruff>=0.11.4
-strands-agents
+strands-agents==1.5.0

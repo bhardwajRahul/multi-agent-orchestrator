@@ -15,7 +15,7 @@ from strands.agent.agent_result import AgentResult
 from strands.types.content import Messages
 from strands.agent.conversation_manager import ConversationManager
 from strands.types.traces import AttributeValue
-from strands.types.models import Model
+from strands.models.model import Model
 
 class StrandsAgent(Agent):
     """

@@ -13,7 +13,7 @@ from agent_squad.agents import AgentOptions
 from agent_squad.agents.strands_agent import StrandsAgent
 from agent_squad.types import ConversationMessage, ParticipantRole
 from strands.agent.agent_result import AgentResult
-from strands.types.models import Model
+from strands.models.model import Model
 
 
 @pytest.fixture
