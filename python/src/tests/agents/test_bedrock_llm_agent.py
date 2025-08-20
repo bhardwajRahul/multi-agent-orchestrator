@@ -32,10 +32,16 @@ def bedrock_llm_agent(mock_boto3_client):
             'stopSequences': []
         },
         guardrail_config={
-        'guardrailIdentifier': 'myGuardrailIdentifier',
-        'guardrailVersion': 'myGuardrailVersion',
-        'trace': 'enabled'
-    }
+            'guardrailIdentifier': 'myGuardrailIdentifier',
+            'guardrailVersion': 'myGuardrailVersion',
+            'trace': 'enabled'
+        },
+        additional_model_request_fields={
+            'thinking': {
+                'type': 'enabled',
+                'budget_tokens': 2000
+            }
+        }
     )
     agent = BedrockLLMAgent(options)
     yield agent
@@ -728,10 +734,19 @@ def test_build_conversation_command(bedrock_llm_agent):
     assert "inferenceConfig" in result
     assert result["inferenceConfig"]["maxTokens"] == bedrock_llm_agent.inference_config["maxTokens"]
     assert result["inferenceConfig"]["temperature"] == bedrock_llm_agent.inference_config["temperature"]
-    assert result["inferenceConfig"]["topP"] == bedrock_llm_agent.inference_config["topP"]
+    
+    # Check for topP only if it exists in the inference_config
+    # (it's removed when reasoning_config with thinking is enabled)
+    if "topP" in bedrock_llm_agent.inference_config:
+        assert result["inferenceConfig"]["topP"] == bedrock_llm_agent.inference_config["topP"]
+    else:
+        assert "topP" not in result["inferenceConfig"]
+        
     assert "guardrailConfig" in result
     assert "toolConfig" in result
     assert result["toolConfig"]["tools"] == [{"name": "test_tool"}]
+    assert "additionalModelRequestFields" in result
+    assert "thinking" in result["additionalModelRequestFields"]
 
     # Test without tool config
     bedrock_llm_agent.tool_config = None
@@ -754,3 +769,66 @@ def test_client_provided(client_fixture):
 
     agent = BedrockLLMAgent(options)
     assert agent.client is client_fixture
+
+
+def test_additional_model_request_fields(mock_boto3_client):
+    """Test that additional_model_request_fields are properly added to the model input."""
+    # Test with thinking parameter
+    thinking_config = {"type": "enabled", "budget_tokens": 2000}
+    options = BedrockLLMAgentOptions(
+        name="TestAgent",
+        description="A test agent",
+        model_id="test-model",
+        additional_model_request_fields={"thinking": thinking_config}
+    )
+
+    agent = BedrockLLMAgent(options)
+    conversation = [ConversationMessage(
+        role=ParticipantRole.USER.value,
+        content=[{"text": "Test message"}]
+    )]
+    system_prompt = "Test system prompt"
+
+    # Test with thinking
+    result = agent._build_conversation_command(conversation, system_prompt)
+    assert result["additionalModelRequestFields"]["thinking"] == thinking_config
+    
+    # Verify topP is removed when thinking is enabled
+    assert "topP" not in result["inferenceConfig"]
+    
+    # Test with multiple additional fields
+    options = BedrockLLMAgentOptions(
+        name="TestAgent",
+        description="A test agent",
+        model_id="test-model",
+        additional_model_request_fields={
+            "thinking": thinking_config,
+            "custom_param": "custom_value",
+            "metadata": {"source": "unit_test"}
+        }
+    )
+    
+    agent = BedrockLLMAgent(options)
+    result = agent._build_conversation_command(conversation, system_prompt)
+    
+    # Verify all additional fields are present
+    assert result["additionalModelRequestFields"]["thinking"] == thinking_config
+    assert result["additionalModelRequestFields"]["custom_param"] == "custom_value"
+    assert result["additionalModelRequestFields"]["metadata"] == {"source": "unit_test"}
+    
+    # Test without thinking - topP should be present
+    options = BedrockLLMAgentOptions(
+        name="TestAgent",
+        description="A test agent",
+        model_id="test-model",
+        additional_model_request_fields={
+            "custom_param": "custom_value"
+        }
+    )
+    
+    agent = BedrockLLMAgent(options)
+    result = agent._build_conversation_command(conversation, system_prompt)
+    
+    # Verify topP is present when thinking is not enabled
+    assert "topP" in result["inferenceConfig"]
+    assert result["inferenceConfig"]["topP"] == 0.9  # Default value

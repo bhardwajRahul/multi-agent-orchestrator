@@ -32,6 +32,7 @@ class BedrockLLMAgentOptions(AgentOptions):
     tool_config: dict[str, Any] | AgentTools | None = None
     custom_system_prompt: Optional[dict[str, Any]] = None
     client: Optional[Any] = None
+    additional_model_request_fields: Optional[dict[str, Any]] = None
 
 
 class BedrockLLMAgent(Agent):
@@ -41,9 +42,7 @@ class BedrockLLMAgent(Agent):
             self.client = options.client
         else:
             if options.region:
-                self.client = boto3.client(
-                    "bedrock-runtime", region_name=options.region
-                )
+                self.client = boto3.client("bedrock-runtime", region_name=options.region)
             else:
                 self.client = boto3.client("bedrock-runtime")
 
@@ -68,7 +67,14 @@ class BedrockLLMAgent(Agent):
         else:
             self.inference_config = default_inference_config
 
+        self.additional_model_request_fields: Optional[dict[str, Any]] = options.additional_model_request_fields or {}
+        # if thinking is enabled, unset top_p
+        if self.additional_model_request_fields.get("thinking", {}).get("type") == "enabled":
+            Logger.warn("Removing topP for thinking mode")
+            del self.inference_config["topP"]
+
         self.guardrail_config: Optional[dict[str, str]] = options.guardrail_config or {}
+
         self.retriever: Optional[Retriever] = options.retriever
         self.tool_config: Optional[dict[str, Any]] = options.tool_config
 
@@ -123,30 +129,34 @@ class BedrockLLMAgent(Agent):
     ) -> list[ConversationMessage]:
         """Prepare the conversation history with the new user message."""
 
-        user_message = ConversationMessage(
-            role=ParticipantRole.USER.value, content=[{"text": input_text}]
-        )
+        user_message = ConversationMessage(role=ParticipantRole.USER.value, content=[{"text": input_text}])
         return [*chat_history, user_message]
 
-    def _build_conversation_command(
-        self, conversation: list[ConversationMessage], system_prompt: str
-    ) -> dict:
+    def _build_conversation_command(self, conversation: list[ConversationMessage], system_prompt: str) -> dict:
         """Build the conversation command with all necessary configurations."""
+
+        inference_config = {
+            "maxTokens": self.inference_config.get("maxTokens"),
+            "temperature": self.inference_config.get("temperature"),
+            "stopSequences": self.inference_config.get("stopSequences"),
+        }
+
+        # Only add topP if it exists in the inference_config
+        if "topP" in self.inference_config:
+            inference_config["topP"] = self.inference_config["topP"]
 
         command = {
             "modelId": self.model_id,
             "messages": conversation_to_dict(conversation),
             "system": [{"text": system_prompt}],
-            "inferenceConfig": {
-                "maxTokens": self.inference_config.get("maxTokens"),
-                "temperature": self.inference_config.get("temperature"),
-                "topP": self.inference_config.get("topP"),
-                "stopSequences": self.inference_config.get("stopSequences"),
-            },
+            "inferenceConfig": inference_config,
         }
 
         if self.guardrail_config:
             command["guardrailConfig"] = self.guardrail_config
+
+        if self.additional_model_request_fields:
+            command["additionalModelRequestFields"] = self.additional_model_request_fields
 
         if self.tool_config:
             command["toolConfig"] = self._prepare_tool_config()
@@ -186,23 +196,33 @@ class BedrockLLMAgent(Agent):
 
         continue_with_tools = True
         llm_response = None
+        accumulated_thinking = None
 
         while continue_with_tools and max_recursions > 0:
-            llm_response = await self.handle_single_response(
-                command, agent_tracking_info
-            )
+            llm_response = await self.handle_single_response(command, agent_tracking_info)
+
+            # Extract thinking content if present in the response
+            for content_item in llm_response.content:
+                if isinstance(content_item, dict) and "reasoningContent" in content_item:
+                    accumulated_thinking = content_item["reasoningContent"]
+                    break
+
             conversation.append(llm_response)
 
             if any("toolUse" in content for content in llm_response.content):
-                tool_response = await self._process_tool_block(
-                    llm_response, conversation, agent_tracking_info
-                )
+                tool_response = await self._process_tool_block(llm_response, conversation, agent_tracking_info)
                 conversation.append(tool_response)
                 command["messages"] = conversation_to_dict(conversation)
             else:
                 continue_with_tools = False
 
             max_recursions -= 1
+
+        # Add final_thinking to agent tracking info for callbacks
+        if accumulated_thinking:
+            if not agent_tracking_info:
+                agent_tracking_info = {}
+            agent_tracking_info["final_thinking"] = accumulated_thinking
 
         return llm_response
 
@@ -216,27 +236,28 @@ class BedrockLLMAgent(Agent):
         """Handle streaming response processing with tool recursion."""
         continue_with_tools = True
         final_response = None
+        accumulated_thinking = ""  # Track thinking across chunks
 
         async def stream_generator():
-            nonlocal continue_with_tools, final_response, max_recursions
+            nonlocal continue_with_tools, final_response, max_recursions, accumulated_thinking
 
             while continue_with_tools and max_recursions > 0:
-                response = self.handle_streaming_response(
-                    command, agent_tracking_info=agent_tracking_info
-                )
+                response = self.handle_streaming_response(command, agent_tracking_info=agent_tracking_info)
 
                 async for chunk in response:
                     if isinstance(chunk, AgentStreamResponse):
                         yield chunk
+
                         if chunk.final_message:
                             final_response = chunk.final_message
+                            # Capture final thinking if available
+                            if chunk.final_thinking:
+                                accumulated_thinking = chunk.final_thinking
 
                 conversation.append(final_response)
 
                 if any("toolUse" in content for content in final_response.content):
-                    tool_response = await self._process_tool_block(
-                        final_response, conversation, agent_tracking_info
-                    )
+                    tool_response = await self._process_tool_block(final_response, conversation, agent_tracking_info)
 
                     conversation.append(tool_response)
                     command["messages"] = conversation_to_dict(conversation)
@@ -250,6 +271,7 @@ class BedrockLLMAgent(Agent):
                 "response": final_response,
                 "messages": conversation,
                 "agent_tracking_info": agent_tracking_info,
+                "final_thinking": accumulated_thinking if accumulated_thinking else None,
             }
             await self.callbacks.on_agent_end(**kwargs)
 
@@ -267,12 +289,8 @@ class BedrockLLMAgent(Agent):
         max_recursions = self._get_max_recursions()
 
         if streaming:
-            return await self._handle_streaming(
-                command, conversation, max_recursions, agent_tracking_info
-            )
-        response = await self._handle_single_response_loop(
-            command, conversation, max_recursions, agent_tracking_info
-        )
+            return await self._handle_streaming(command, conversation, max_recursions, agent_tracking_info)
+        response = await self._handle_single_response_loop(command, conversation, max_recursions, agent_tracking_info)
 
         kwargs = {
             "agent_name": self.name,
@@ -310,9 +328,7 @@ class BedrockLLMAgent(Agent):
 
         command = self._build_conversation_command(conversation, system_prompt)
 
-        return await self._process_with_strategy(
-            self.streaming, command, conversation, agent_tracking_info
-        )
+        return await self._process_with_strategy(self.streaming, command, conversation, agent_tracking_info)
 
     async def _process_tool_block(
         self,
@@ -322,9 +338,7 @@ class BedrockLLMAgent(Agent):
     ) -> ConversationMessage:
         if "useToolHandler" in self.tool_config:
             # tool process logic is handled elsewhere
-            tool_response = await self.tool_config["useToolHandler"](
-                llm_response, conversation
-            )
+            tool_response = await self.tool_config["useToolHandler"](llm_response, conversation)
         else:
             additional_params = {
                 "agent_name": self.name,
@@ -339,9 +353,7 @@ class BedrockLLMAgent(Agent):
                     additional_params,
                 )
             else:
-                raise ValueError(
-                    "You must use AgentTools class when not providing a custom tool handler"
-                )
+                raise ValueError("You must use AgentTools class when not providing a custom tool handler")
         return tool_response
 
     async def handle_single_response(
@@ -360,6 +372,35 @@ class BedrockLLMAgent(Agent):
             if "output" not in response:
                 raise ValueError("No output received from Bedrock model")
 
+            # Extract thinking content if available
+            thinking_content = None
+            if "reasoningContent" in response["output"]["message"]["content"][0]:
+                if "reasoningText" in response["output"]["message"]["content"][0]["reasoningContent"]:
+                    thinking_content = response["output"]["message"]["content"][0]["reasoningContent"]
+
+            # Get content from response and filter for text items
+            response_content = response["output"]["message"]["content"]
+            content = []
+
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "text" in item:
+                    content.append(item)
+
+            toolInUse=True
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "toolUse" in item:
+                    content.append(item)
+                    toolInUse = True
+
+            # when a tool is used, the next iteration should have the reasoningContent at the first location
+            if toolInUse:
+                if thinking_content:
+                    content.insert(0,{"reasoningContent": thinking_content})
+            else:
+                content.append({"reasoningContent": thinking_content})
+
             kwargs = {
                 "name": self.name,
                 "output": response.get("output", {}).get("message"),
@@ -368,12 +409,13 @@ class BedrockLLMAgent(Agent):
                 "input": converse_input,
                 "inferenceConfig": converse_input.get("inferenceConfig"),
                 "agent_tracking_info": agent_tracking_info,
+                "final_thinking": thinking_content,  # Add thinking to callback
             }
             await self.callbacks.on_llm_end(**kwargs)
 
             return ConversationMessage(
                 role=response["output"]["message"]["role"],
-                content=response["output"]["message"]["content"],
+                content=content,
             )
         except Exception as error:
             Logger.error(f"Error invoking Bedrock model:{str(error)}")
@@ -386,13 +428,20 @@ class BedrockLLMAgent(Agent):
     ) -> AsyncGenerator[AgentStreamResponse, None]:
         """
         Handle streaming response from Bedrock model.
-        Yields StreamChunk objects containing either text chunks or the final message.
+        Yields StreamChunk objects containing text chunks, thinking content, or the final message.
+
+        When thinking is enabled through additional_model_request_fields, this method will:
+        1. Process "reasoningContent" events as thinking content
+        2. Accumulate thinking content throughout the streaming process
+        3. Include the final thinking content in the final message
+        4. Pass thinking tokens to callbacks with the thinking=True flag
 
         Args:
             converse_input: Input for the conversation
+            agent_tracking_info: Tracking information for callbacks
 
         Yields:
-            StreamChunk: Contains either a text chunk or the final complete message
+            AgentStreamResponse: Contains text chunks, thinking content, or the final message with thinking
         """
         try:
             kwargs = {
@@ -409,6 +458,9 @@ class BedrockLLMAgent(Agent):
             content = []
             message["content"] = content
             text = ""
+            thinking_signature = {}
+            thinking = ""
+            accumulated_thinking = ""  # Add this for complete thinking content
             tool_use = {}
 
             for chunk in response["stream"]:
@@ -433,33 +485,74 @@ class BedrockLLMAgent(Agent):
                         await self.callbacks.on_llm_new_token(**token_kwargs)
                         # yield the text chunk
                         yield AgentStreamResponse(text=delta["text"])
+                    elif "reasoningContent" in delta:
+                        if "text" in delta["reasoningContent"]:
+                            thinking_text = delta["reasoningContent"]["text"]
+                            accumulated_thinking += thinking_text
+                            token_kwargs = {
+                                "token": thinking_text,
+                                "agent_tracking_info": agent_tracking_info,
+                                "thinking": True,
+                            }
+                            await self.callbacks.on_llm_new_token(**token_kwargs)
+                            # yield with thinking field instead of text
+                            yield AgentStreamResponse(thinking=thinking_text)
+                        elif "signature" in delta["reasoningContent"]:
+                            thinking_signature = delta["reasoningContent"]["signature"]
                 elif "contentBlockStop" in chunk:
                     if "input" in tool_use and tool_use.get("input"):
                         tool_use["input"] = json.loads(tool_use["input"])
                         content.append({"toolUse": tool_use})
                         tool_use = {}
                     else:
-                        content.append({"text": text})
-                        text = ""
+                        if text:
+                            content.append({"text": text})
+                            text = ""
                 elif "metadata" in chunk:
                     metadata = chunk.get("metadata")
 
-            final_message = ConversationMessage(
-                role=ParticipantRole.ASSISTANT.value, content=message["content"]
-            )
+            # Get content from response and filter for text items
+            response_content = message["content"]
+            _content = []
+
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "text" in item:
+                    _content.append(item)
+
+            toolInUse=True
+            # Go through response content and save text items
+            for item in response_content:
+                if isinstance(item, dict) and "toolUse" in item:
+                    _content.append(item)
+                    toolInUse = True
+
+            # when a tool is used, the next iteration should have the reasoningContent at the first index
+            if toolInUse:
+                if accumulated_thinking:
+                    _content.insert(0,{"reasoningContent": {"reasoningText": {"text": accumulated_thinking, "signature":thinking_signature}}})
+            else:
+                _content.append({"reasoningContent": {"reasoningText": {"text": accumulated_thinking, "signature":thinking_signature}}})
+
+
+            final_message = ConversationMessage(role=ParticipantRole.ASSISTANT.value, content=_content)
 
             kwargs = {
                 "name": self.name,
-                "output": message["content"],
+                "output": _content,
                 "usage": metadata.get("usage"),
                 "system": converse_input.get("system")[0].get("text"),
                 "input": converse_input,
                 "agent_tracking_info": agent_tracking_info,
+                "final_thinking": accumulated_thinking if accumulated_thinking else None,
             }
             await self.callbacks.on_llm_end(**kwargs)
 
-            # yield the final message
-            yield AgentStreamResponse(final_message=final_message)
+            # yield the final message with thinking
+            yield AgentStreamResponse(
+                final_message=final_message,
+                final_thinking=accumulated_thinking if accumulated_thinking else None
+            )
         except Exception as error:
             Logger.error(f"Error getting stream from Bedrock model: {str(error)}")
             raise error
@@ -477,9 +570,7 @@ class BedrockLLMAgent(Agent):
 
     def update_system_prompt(self) -> None:
         all_variables: TemplateVariables = {**self.custom_variables}
-        self.system_prompt = self.replace_placeholders(
-            self.prompt_template, all_variables
-        )
+        self.system_prompt = self.replace_placeholders(self.prompt_template, all_variables)
 
     @staticmethod
     def replace_placeholders(template: str, variables: TemplateVariables) -> str:

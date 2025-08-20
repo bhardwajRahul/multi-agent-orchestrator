@@ -15,7 +15,7 @@ import { Retriever } from "../retrievers/retriever";
 import { Logger } from "../utils/logger";
 import { AgentToolResult, AgentTools } from "../utils/tool";
 import { isConversationMessage } from "../utils/helpers";
-import { addUserAgentMiddleware } from '../common/src/awsSdkUtils';
+import { addUserAgentMiddleware } from "../common/src/awsSdkUtils";
 
 export interface BedrockLLMAgentOptions extends AgentOptions {
   modelId?: string;
@@ -31,6 +31,12 @@ export interface BedrockLLMAgentOptions extends AgentOptions {
     guardrailIdentifier: string;
     guardrailVersion: string;
   };
+  reasoningConfig?: {
+    thinking: {
+      type: string;
+      budget_tokens: number;
+    };
+  };
   retriever?: Retriever;
   toolConfig?: {
     tool: AgentTools | Tool[];
@@ -42,7 +48,7 @@ export interface BedrockLLMAgentOptions extends AgentOptions {
     variables?: TemplateVariables;
   };
   client?: BedrockRuntimeClient;
-  callbacks?: AgentCallbacks
+  callbacks?: AgentCallbacks;
 }
 
 /**
@@ -72,6 +78,13 @@ export class BedrockLLMAgent extends Agent {
   protected guardrailConfig?: {
     guardrailIdentifier: string;
     guardrailVersion: string;
+  };
+
+  protected reasoningConfig?: {
+    thinking: {
+      type: string;
+      budget_tokens: number;
+    };
   };
 
   protected retriever?: Retriever;
@@ -105,7 +118,7 @@ export class BedrockLLMAgent extends Agent {
         ? new BedrockRuntimeClient({ region: options.region })
         : new BedrockRuntimeClient();
 
-    addUserAgentMiddleware(this.client, "bedrock-llm-agent")
+    addUserAgentMiddleware(this.client, "bedrock-llm-agent");
 
     // Initialize the modelId
     this.modelId = options.modelId ?? BEDROCK_MODEL_ID_CLAUDE_3_HAIKU;
@@ -115,6 +128,8 @@ export class BedrockLLMAgent extends Agent {
     this.inferenceConfig = options.inferenceConfig ?? {};
 
     this.guardrailConfig = options.guardrailConfig ?? null;
+
+    this.reasoningConfig = options.reasoningConfig ?? null;
 
     this.retriever = options.retriever ?? null;
 
@@ -295,11 +310,16 @@ export class BedrockLLMAgent extends Agent {
         inferenceConfig: {
           maxTokens: this.inferenceConfig.maxTokens,
           temperature: this.inferenceConfig.temperature,
-          topP: this.inferenceConfig.topP,
           stopSequences: this.inferenceConfig.stopSequences,
+          ...(this.reasoningConfig?.thinking.type !== "enable" && {
+            topP: this.inferenceConfig.topP,
+          }),
         },
         ...(this.guardrailConfig && {
           guardrailConfig: this.guardrailConfig,
+        }),
+        ...(this.reasoningConfig && {
+          additionalModelRequestFields: this.reasoningConfig,
         }),
         ...(this.toolConfig && {
           toolConfig: {
@@ -396,17 +416,17 @@ export class BedrockLLMAgent extends Agent {
     }
   }
 
-  private async *handleStreamingResponse(input: any): AsyncIterable<string> {
+  private async *handleStreamingResponse(input: any): AsyncIterable<string | any> {
     let toolBlock: any = { toolUseId: "", input: {}, name: "" };
     let inputString = "";
     let toolUse = false;
-    let recursions =
-      this.toolConfig?.toolMaxRecursions || this.defaultMaxRecursions;
-
+    let recursions = this.toolConfig?.toolMaxRecursions || this.defaultMaxRecursions;
     try {
       do {
         const command = new ConverseStreamCommand(input);
         const response = await this.client.send(command);
+        let reasoningContent = null;
+        let accumulatedThinking = '';
         if (!response.stream) {
           throw new Error("No stream received from Bedrock model");
         }
@@ -417,16 +437,37 @@ export class BedrockLLMAgent extends Agent {
             chunk.contentBlockDelta.delta.text
           ) {
             yield chunk.contentBlockDelta.delta.text;
-          } else if (chunk.contentBlockStart?.start?.toolUse) {
+          } else if (chunk.contentBlockDelta?.delta?.reasoningContent?.text) {
+            const thinking = {
+              thinking: true,
+              content: chunk.contentBlockDelta.delta.reasoningContent.text,
+            };
+            accumulatedThinking += chunk.contentBlockDelta.delta.reasoningContent.text;
+            yield thinking;
+          }
+          else if (chunk.contentBlockDelta?.delta?.reasoningContent?.signature) {
+            reasoningContent = {
+              reasoningText:
+              {
+                text: accumulatedThinking,
+                signature:chunk.contentBlockDelta.delta.reasoningContent.signature
+              }
+            }
+          }
+          else if (chunk.contentBlockStart?.start?.toolUse) {
             toolBlock = chunk.contentBlockStart?.start?.toolUse;
           } else if (chunk.contentBlockDelta?.delta?.toolUse) {
             inputString += chunk.contentBlockDelta.delta.toolUse.input;
           } else if (chunk.messageStop?.stopReason === "tool_use") {
             toolBlock.input = JSON.parse(inputString);
-            const message = {
-              role: ParticipantRole.ASSISTANT,
-              content: [{ toolUse: toolBlock }],
-            };
+            let message = {
+                role: ParticipantRole.ASSISTANT,
+                content: [],
+              };
+            if (reasoningContent){
+              message.content.push({reasoningContent:reasoningContent});
+            }
+            message.content.push({ toolUse: toolBlock })
             input.messages.push(message);
 
             const tools = this.toolConfig.tool;
@@ -449,10 +490,7 @@ export class BedrockLLMAgent extends Agent {
                 );
               });
 
-            const toolResponse = await toolHandler(
-              message,
-              input.messages
-            );
+            const toolResponse = await toolHandler(message, input.messages);
             const formattedResponse = this.formatToolResults(toolResponse);
 
             input.messages.push(formattedResponse);

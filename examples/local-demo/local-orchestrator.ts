@@ -51,17 +51,25 @@ function createOrchestrator(): AgentSquad {
   // Add weahter agent with tool
   const weatherAgent = new BedrockLLMAgent({
     name: "Weather Agent",
+    modelId:"us.anthropic.claude-3-7-sonnet-20250219-v1:0",
     description:
       "Specialized agent for giving weather condition from a city.",
-    streaming: true,
-    inferenceConfig: {
-      temperature: 0.1,
-    },
+    streaming: false,
     toolConfig: {
       tool: weatherToolDescription,
       useToolHandler: weatherToolHanlder,
       toolMaxRecursions: 5,
-    }
+    },
+    inferenceConfig: {
+        temperature: 1.0,
+        maxTokens:4096,
+      },
+      reasoningConfig:{
+        thinking:{
+          type:'enabled',
+          budget_tokens: 4000,
+        }
+      }
   });
   weatherAgent.setSystemPrompt(WEATHER_PROMPT);
   orchestrator.addAgent(weatherAgent);
@@ -174,6 +182,10 @@ async function runLocalConversation(): Promise<void> {
           for await (const chunk of response.output) {
             if (typeof chunk === "string") {
               process.stdout.write(chunk);
+            }
+            else if (typeof chunk === "object" && chunk.hasOwnProperty("thinking")) {
+              // Print thinking content in cyan color
+              process.stdout.write('\x1b[36m' + chunk.content + '\x1b[0m');
             } else {
               Logger.logger.error("Received unexpected chunk type:", typeof chunk);
             }
