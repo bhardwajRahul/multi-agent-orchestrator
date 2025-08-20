@@ -159,7 +159,7 @@ class AnthropicAgent(Agent):
         Returns:
             dict: The complete input configuration for the API call
         """
-        input = {
+        json_input = {
             "model": self.model_id,
             "max_tokens": self.inference_config.get("maxTokens"),
             "messages": messages,
@@ -172,7 +172,7 @@ class AnthropicAgent(Agent):
         # Add any additional model request fields
         if self.additional_model_request_fields:
             for key, value in self.additional_model_request_fields.items():
-                input[key] = value
+                json_input[key] = value
 
         if self.tool_config:
             json_input["tools"] = self._prepare_tool_config()
@@ -418,14 +418,14 @@ class AnthropicAgent(Agent):
                 },
                 "input": {
                     "modelId": accumulated.model,
-                    "messages": input.get("messages"),
-                    "system": input.get("system"),
+                    "messages": payload_input.get("messages"),
+                    "system": payload_input.get("system"),
                 },
                 "inferenceConfig": {
-                    "temperature": input.get("temperature"),
-                    "top_p": input.get("top_p"),
-                    "stop_sequences": input.get("stop_sequences"),
-                    "max_tokens": input.get("max_tokens"),
+                    "temperature": payload_input.get("temperature"),
+                    "top_p": payload_input.get("top_p"),
+                    "stop_sequences": payload_input.get("stop_sequences"),
+                    "max_tokens": payload_input.get("max_tokens"),
                 },
                 "final_thinking": accumulated_thinking,
 
