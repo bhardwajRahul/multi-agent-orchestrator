@@ -15,7 +15,7 @@ This example demonstrates how to build a chat application using Chainlit and the
 ## Quick Start
 ```bash
 # Clone the repository
-git clone https://github.com/awslabs/agent-squad.git
+git clone https://github.com/2fastlabs/agent-squad.git
 cd agent-squad/examples/chat-chainlit-app
 
 # Install dependencies
@@ -61,4 +61,4 @@ User: "Recommend a workout routine"
 → Routed to Health Agent
 ```
 
-Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/awslabs/agent-squad/tree/main/examples/chat-chainlit-app) in our GitHub repository.
+Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/2fastlabs/agent-squad/tree/main/examples/chat-chainlit-app) in our GitHub repository.

@@ -102,4 +102,4 @@ npx ts-node quickstart.ts
 - Add custom error handling
 - Implement streaming responses
 
-Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/awslabs/agent-squad/tree/main/examples/local-demo) in our GitHub repository.
+Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/2fastlabs/agent-squad/tree/main/examples/local-demo) in our GitHub repository.

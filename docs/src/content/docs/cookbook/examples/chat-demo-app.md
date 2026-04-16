@@ -40,7 +40,7 @@ Follow these steps to deploy the demo chat web application:
 
 1. **Clone the Repository** (if you haven't already):
    ```
-   git clone https://github.com/awslabs/agent-squad.git
+   git clone https://github.com/2fastlabs/agent-squad.git
    cd agent-squad
    ```
 
@@ -148,4 +148,4 @@ This demo application is intended solely for demonstration purposes. It is not d
 
 For production usage, it is crucial to implement proper security measures to protect PII and personal data. This includes obtaining proper permissions from users, utilizing encryption for data both in transit and at rest, and adhering to industry standards and regulations to maximize security. Failure to do so may result in data breaches and other serious security issues.
 
-Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/awslabs/agent-squad/tree/main/examples/chat-demo-app) in our GitHub repository.
+Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/2fastlabs/agent-squad/tree/main/examples/chat-demo-app) in our GitHub repository.

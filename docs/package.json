@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/awslabs/agent-squad"
+    "url": "git://github.com/2fastlabs/agent-squad"
   },
   "license": "Apache-2.0",
   "dependencies": {

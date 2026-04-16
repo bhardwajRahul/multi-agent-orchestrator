@@ -61,4 +61,4 @@ for chunk in response.iter_content():
     print(chunk.decode(), end='', flush=True)
 ```
 
-Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/awslabs/agent-squad/tree/main/examples/fast-api-streaming) in our GitHub repository.
+Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/2fastlabs/agent-squad/tree/main/examples/fast-api-streaming) in our GitHub repository.

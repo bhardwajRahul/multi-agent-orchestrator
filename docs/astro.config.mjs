@@ -21,7 +21,7 @@ export default defineConfig({
 				'./src/styles/terminal.css'
 			],
 			social: {
-				github: 'https://github.com/awslabs/agent-squad'
+				github: 'https://github.com/2fastlabs/agent-squad'
 			},
 			sidebar: [
 				{

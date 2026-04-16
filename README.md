@@ -10,7 +10,7 @@
 ---
 
 <p align="center">
-  <a href="https://github.com/awslabs/agent-squad"><img alt="GitHub Repo" src="https://img.shields.io/badge/GitHub-Repo-green.svg" /></a>
+  <a href="https://github.com/2fastlabs/agent-squad"><img alt="GitHub Repo" src="https://img.shields.io/badge/GitHub-Repo-green.svg" /></a>
   <a href="https://www.npmjs.com/package/agent-squad"><img alt="npm" src="https://img.shields.io/npm/v/agent-squad.svg?style=flat-square"></a>
   <a href="https://pypi.org/project/agent-squad/"><img alt="PyPI" src="https://img.shields.io/pypi/v/agent-squad.svg?style=flat-square"></a>
 </p>
@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  <a href="https://awslabs.github.io/agent-squad/" style="display: inline-block; background-color: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 15px; transition: background-color 0.3s;">
+  <a href="https://2fastlabs.github.io/agent-squad/" style="display: inline-block; background-color: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 15px; transition: background-color 0.3s;">
     📚 Explore Full Documentation
   </a>
 </p>
@@ -61,7 +61,7 @@ This adaptability makes it suitable for a wide range of applications, from simpl
 
 <br /><br />
 
-![High-level architecture flow diagram](https://raw.githubusercontent.com/awslabs/agent-squad/main/img/flow.jpg)
+![High-level architecture flow diagram](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/flow.jpg)
 
 <br /><br />
 
@@ -71,11 +71,11 @@ This adaptability makes it suitable for a wide range of applications, from simpl
 4. The orchestrator then saves the conversation, updating the Agents' Conversation history, before delivering the response back to the user.
 
 
-## ![](https://raw.githubusercontent.com/awslabs/agent-squad/main/img/new.png) Introducing SupervisorAgent: Agents Coordination
+## ![](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/new.png) Introducing SupervisorAgent: Agents Coordination
 
 The Agent Squad now includes a powerful new SupervisorAgent that enables sophisticated team coordination between multiple specialized agents. This new component implements a "agent-as-tools" architecture, allowing a lead agent to coordinate a team of specialized agents in parallel, maintaining context and delivering coherent responses.
 
-![SupervisorAgent flow diagram](https://raw.githubusercontent.com/awslabs/agent-squad/main/img/flow-supervisor.jpg)
+![SupervisorAgent flow diagram](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/flow-supervisor.jpg)
 
 Key capabilities:
 - 🤝 **Team Coordination** - Coordinate multiple specialized agents working together on complex tasks
@@ -96,7 +96,7 @@ Here are just a few examples where this agent can be used:
 - Healthcare Coordination Systems
 
 
-[Learn more about SupervisorAgent →](https://awslabs.github.io/agent-squad/agents/built-in/supervisor-agent)
+[Learn more about SupervisorAgent →](https://2fastlabs.github.io/agent-squad/agents/built-in/supervisor-agent)
 
 
 ## 💬 Demo App
@@ -114,7 +114,7 @@ Notice how the appropriate agent is selected for each query, maintaining coheren
 
 The demo highlights the system's ability to handle complex, multi-turn conversations while preserving context and leveraging specialized agents across various domains.
 
-![](https://raw.githubusercontent.com/awslabs/agent-squad/main/img/demo-app.gif?raw=true)
+![](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/demo-app.gif?raw=true)
 
 
 ## 🎯 Examples & Quick Start
@@ -122,27 +122,27 @@ The demo highlights the system's ability to handle complex, multi-turn conversat
 Get hands-on experience with the Agent Squad through our diverse set of examples:
 
 - **Demo Applications**:
-  - [Streamlit Global Demo](https://github.com/awslabs/agent-squad/tree/main/examples/python): A single Streamlit application showcasing multiple demos, including:
+  - [Streamlit Global Demo](https://github.com/2fastlabs/agent-squad/tree/main/examples/python): A single Streamlit application showcasing multiple demos, including:
     - AI Movie Production Studio
     - AI Travel Planner
-  - [Chat Demo App](https://awslabs.github.io/agent-squad/cookbook/examples/chat-demo-app/):
+  - [Chat Demo App](https://2fastlabs.github.io/agent-squad/cookbook/examples/chat-demo-app/):
     - Explore multiple specialized agents handling various domains like travel, weather, math, and health
-  - [E-commerce Support Simulator](https://awslabs.github.io/agent-squad/cookbook/examples/ecommerce-support-simulator/): Experience AI-powered customer support with:
+  - [E-commerce Support Simulator](https://2fastlabs.github.io/agent-squad/cookbook/examples/ecommerce-support-simulator/): Experience AI-powered customer support with:
     - Automated response generation for common queries
     - Intelligent routing of complex issues to human support
     - Real-time chat and email-style communication
     - Human-in-the-loop interactions for complex cases
 - **Sample Projects**: Explore our example implementations in the `examples` folder:
-  - [`chat-demo-app`](https://github.com/awslabs/agent-squad/tree/main/examples/chat-demo-app): Web-based chat interface with multiple specialized agents
-  - [`ecommerce-support-simulator`](https://github.com/awslabs/agent-squad/tree/main/examples/ecommerce-support-simulator): AI-powered customer support system
-  - [`chat-chainlit-app`](https://github.com/awslabs/agent-squad/tree/main/examples/chat-chainlit-app): Chat application built with Chainlit
-  - [`fast-api-streaming`](https://github.com/awslabs/agent-squad/tree/main/examples/fast-api-streaming): FastAPI implementation with streaming support
-  - [`text-2-structured-output`](https://github.com/awslabs/agent-squad/tree/main/examples/text-2-structured-output): Natural Language to Structured Data
-  - [`bedrock-inline-agents`](https://github.com/awslabs/agent-squad/tree/main/examples/bedrock-inline-agents): Bedrock Inline Agents sample
-  - [`bedrock-prompt-routing`](https://github.com/awslabs/agent-squad/tree/main/examples/bedrock-prompt-routing): Bedrock Prompt Routing sample code
+  - [`chat-demo-app`](https://github.com/2fastlabs/agent-squad/tree/main/examples/chat-demo-app): Web-based chat interface with multiple specialized agents
+  - [`ecommerce-support-simulator`](https://github.com/2fastlabs/agent-squad/tree/main/examples/ecommerce-support-simulator): AI-powered customer support system
+  - [`chat-chainlit-app`](https://github.com/2fastlabs/agent-squad/tree/main/examples/chat-chainlit-app): Chat application built with Chainlit
+  - [`fast-api-streaming`](https://github.com/2fastlabs/agent-squad/tree/main/examples/fast-api-streaming): FastAPI implementation with streaming support
+  - [`text-2-structured-output`](https://github.com/2fastlabs/agent-squad/tree/main/examples/text-2-structured-output): Natural Language to Structured Data
+  - [`bedrock-inline-agents`](https://github.com/2fastlabs/agent-squad/tree/main/examples/bedrock-inline-agents): Bedrock Inline Agents sample
+  - [`bedrock-prompt-routing`](https://github.com/2fastlabs/agent-squad/tree/main/examples/bedrock-prompt-routing): Bedrock Prompt Routing sample code
 
 
-Examples are available in both Python and TypeScript. Check out our [documentation](https://awslabs.github.io/agent-squad/) for comprehensive guides on setting up and using the Agent Squad framework!
+Examples are available in both Python and TypeScript. Check out our [documentation](https://2fastlabs.github.io/agent-squad/) for comprehensive guides on setting up and using the Agent Squad framework!
 
 ## 📚 Deep Dives: Stories, Blogs & Podcasts
 
@@ -402,11 +402,11 @@ Includes all optional dependencies for maximum flexibility.
 
 Have something to share, discuss, or brainstorm? We’d love to connect with you and hear about your journey with the **Agent Squad framework**. Here’s how you can get involved:
 
-- **🙌 Show & Tell**: Got a success story, cool project, or creative implementation? Share it with us in the [**Show and Tell**](https://github.com/awslabs/agent-squad/discussions/categories/show-and-tell) section. Your work might inspire the entire community! 🎉
+- **🙌 Show & Tell**: Got a success story, cool project, or creative implementation? Share it with us in the [**Show and Tell**](https://github.com/2fastlabs/agent-squad/discussions/categories/show-and-tell) section. Your work might inspire the entire community! 🎉
 
-- **💬 General Discussion**: Have questions, feedback, or suggestions? Join the conversation in our [**General Discussions**](https://github.com/awslabs/agent-squad/discussions/categories/general) section. It’s the perfect place to connect with other users and contributors.
+- **💬 General Discussion**: Have questions, feedback, or suggestions? Join the conversation in our [**General Discussions**](https://github.com/2fastlabs/agent-squad/discussions/categories/general) section. It’s the perfect place to connect with other users and contributors.
 
-- **💡 Ideas**: Thinking of a new feature or improvement? Share your thoughts in the [**Ideas**](https://github.com/awslabs/agent-squad/discussions/categories/ideas) section. We’re always open to exploring innovative ways to make the orchestrator even better!
+- **💡 Ideas**: Thinking of a new feature or improvement? Share your thoughts in the [**Ideas**](https://github.com/2fastlabs/agent-squad/discussions/categories/ideas) section. We’re always open to exploring innovative ways to make the orchestrator even better!
 
 Let’s collaborate, learn from each other, and build something incredible together! 🚀
 
@@ -451,7 +451,7 @@ This policy helps us:
 Once your proposal is approved, here are the next steps:
 
 1. 📚 Review our [Contributing Guide](CONTRIBUTING.md)
-2. 💡 Create a [GitHub Issue](https://github.com/awslabs/agent-squad/issues)
+2. 💡 Create a [GitHub Issue](https://github.com/2fastlabs/agent-squad/issues)
 3. 🔨 Submit a pull request
 
 
@@ -469,7 +469,7 @@ Once your proposal is approved, here are the next steps:
 
 Big shout out to our awesome contributors! Thank you for making this project better! 🌟 ⭐ 🚀
 
-[![contributors](https://contrib.rocks/image?repo=awslabs/agent-squad&max=2000)](https://github.com/awslabs/agent-squad/graphs/contributors)
+[![contributors](https://contrib.rocks/image?repo=2fastlabs/agent-squad&max=2000)](https://github.com/2fastlabs/agent-squad/graphs/contributors)
 
 
 Please see our [contributing guide](./CONTRIBUTING.md) for guidelines on how to propose bugfixes and improvements.
@@ -477,7 +477,7 @@ Please see our [contributing guide](./CONTRIBUTING.md) for guidelines on how to 
 
 ## 📄 LICENSE
 
-This project is licensed under the Apache 2.0 licence - see the [LICENSE](https://raw.githubusercontent.com/awslabs/agent-squad/main/LICENSE) file for details.
+This project is licensed under the Apache 2.0 licence - see the [LICENSE](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/LICENSE) file for details.
 
 ## 📄 Font License
 This project uses the JetBrainsMono NF font, licensed under the SIL Open Font License 1.1.

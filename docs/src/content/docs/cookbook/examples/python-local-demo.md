@@ -109,4 +109,4 @@ python quickstart.py
 - Add error handling and retry logic
 
 
-Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/awslabs/agent-squad/tree/main/examples/python-demo) in our GitHub repository.
+Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/2fastlabs/agent-squad/tree/main/examples/python-demo) in our GitHub repository.

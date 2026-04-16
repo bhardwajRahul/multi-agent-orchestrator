@@ -159,7 +159,7 @@ The `mock_data.json` provides realistic test data:
 ### Quick Start
 ```bash
 # Clone repository
-git clone https://github.com/awslabs/agent-squad.git
+git clone https://github.com/2fastlabs/agent-squad.git
 cd agent-squad/examples/ecommerce-support-simulator
 
 # Install and deploy
@@ -219,9 +219,9 @@ This demo application is intended solely for demonstration purposes. It is not d
 For production usage, it is crucial to implement proper security measures to protect PII and personal data. This includes obtaining proper permissions from users, utilizing encryption for data both in transit and at rest, and adhering to industry standards and regulations to maximize security. Failure to do so may result in data breaches and other serious security issues.
 ## 📚 Additional Resources
 
-- [Agent Squad Documentation](https://github.com/awslabs/agent-squad)
+- [Agent Squad Documentation](https://github.com/2fastlabs/agent-squad)
 - [AWS AppSync Documentation](https://docs.aws.amazon.com/appsync)
 - [Claude API Documentation](https://docs.anthropic.com/en/api/getting-started)
 
 
-Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/awslabs/agent-squad/tree/main/examples/ecommerce-support-simulator) in our GitHub repository.
+Ready to build your own multi-agent chat application? Check out the complete [source code](https://github.com/2fastlabs/agent-squad/tree/main/examples/ecommerce-support-simulator) in our GitHub repository.
