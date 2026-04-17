@@ -48,7 +48,7 @@
 - 📦 **Pre-built agents and classifiers** — A variety of ready-to-use agents and multiple classifier implementations available.
 
 
-## What's the Agent Squad ❓
+## What Is Agent Squad ❓
 
 The Agent Squad is a flexible framework for managing multiple AI agents and handling complex conversations. It intelligently routes queries and maintains context across interactions.
 
