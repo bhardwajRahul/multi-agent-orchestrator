@@ -13,12 +13,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/awslabs/agent-squad"
+    "url": "https://github.com/2fastlabs/agent-squad"
   },
   "bugs": {
-    "url": "https://github.com/awslabs/agent-squad/issues"
+    "url": "https://github.com/2fastlabs/agent-squad/issues"
   },
-  "homepage": "https://github.com/awslabs/agent-squad",
+  "homepage": "https://github.com/2fastlabs/agent-squad",
   "scripts": {
     "prebuild": "npm run generateVersionFile",
     "build": "tsc",

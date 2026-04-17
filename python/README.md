@@ -4,23 +4,23 @@
 
 
 <p align="center">
-  <a href="https://github.com/awslabs/agent-squad"><img alt="GitHub Repo" src="https://img.shields.io/badge/GitHub-Repo-green.svg" /></a>
+  <a href="https://github.com/2fastlabs/agent-squad"><img alt="GitHub Repo" src="https://img.shields.io/badge/GitHub-Repo-green.svg" /></a>
   <a href="https://pypi.org/project/agent-squad/"><img alt="PyPI" src="https://img.shields.io/pypi/v/agent-squad.svg?style=flat-square"></a>
-  <a href="https://awslabs.github.io/agent-squad/"><img alt="Documentation" src="https://img.shields.io/badge/docs-book-blue.svg?style=flat-square"></a>
+  <a href="https://2fastlabs.github.io/agent-squad/"><img alt="Documentation" src="https://img.shields.io/badge/docs-book-blue.svg?style=flat-square"></a>
 </p>
 
 <p align="center">
   <!-- GitHub Stats -->
-  <img src="https://img.shields.io/github/stars/awslabs/agent-squad?style=social" alt="GitHub stars">
-  <img src="https://img.shields.io/github/forks/awslabs/agent-squad?style=social" alt="GitHub forks">
-  <img src="https://img.shields.io/github/watchers/awslabs/agent-squad?style=social" alt="GitHub watchers">
+  <img src="https://img.shields.io/github/stars/2fastlabs/agent-squad?style=social" alt="GitHub stars">
+  <img src="https://img.shields.io/github/forks/2fastlabs/agent-squad?style=social" alt="GitHub forks">
+  <img src="https://img.shields.io/github/watchers/2fastlabs/agent-squad?style=social" alt="GitHub watchers">
 </p>
 
 <p align="center">
   <!-- Repository Info -->
-  <img src="https://img.shields.io/github/last-commit/awslabs/agent-squad" alt="Last Commit">
-  <img src="https://img.shields.io/github/issues/awslabs/agent-squad" alt="Issues">
-  <img src="https://img.shields.io/github/issues-pr/awslabs/agent-squad" alt="Pull Requests">
+  <img src="https://img.shields.io/github/last-commit/2fastlabs/agent-squad" alt="Last Commit">
+  <img src="https://img.shields.io/github/issues/2fastlabs/agent-squad" alt="Issues">
+  <img src="https://img.shields.io/github/issues-pr/2fastlabs/agent-squad" alt="Pull Requests">
 </p>
 
 <p align="center">
@@ -53,7 +53,7 @@ This adaptability makes it suitable for a wide range of applications, from simpl
 
 <br /><br />
 
-![High-level architecture flow diagram](https://raw.githubusercontent.com/awslabs/agent-squad/main/img/flow.jpg)
+![High-level architecture flow diagram](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/flow.jpg)
 
 <br /><br />
 
@@ -66,7 +66,7 @@ This adaptability makes it suitable for a wide range of applications, from simpl
 
 ## 💬 Demo App
 
-To quickly get a feel for the Agent Squad, we've provided a Demo App with a few basic agents. This interactive demo showcases the orchestrator's capabilities in a user-friendly interface. To learn more about setting up and running the demo app, please refer to our [Demo App](https://awslabs.github.io/agent-squad/cookbook/examples/chat-demo-app/) section.
+To quickly get a feel for the Agent Squad, we've provided a Demo App with a few basic agents. This interactive demo showcases the orchestrator's capabilities in a user-friendly interface. To learn more about setting up and running the demo app, please refer to our [Demo App](https://2fastlabs.github.io/agent-squad/cookbook/examples/chat-demo-app/) section.
 
 <br>
 
@@ -84,15 +84,15 @@ Notice how the appropriate agent is selected for each query, maintaining coheren
 The demo highlights the system's ability to handle complex, multi-turn conversations while preserving context and leveraging specialized agents across various domains.
 
 Click on the image below to see a screen recording of the demo app on the GitHub repository of the project:
-<a href="https://github.com/awslabs/agent-squad" target="_blank">
-  <img src="https://raw.githubusercontent.com/awslabs/agent-squad/main/img/demo-app.jpg" alt="Demo App Screen Recording" style="max-width: 100%; height: auto;">
+<a href="https://github.com/2fastlabs/agent-squad" target="_blank">
+  <img src="https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/demo-app.jpg" alt="Demo App Screen Recording" style="max-width: 100%; height: auto;">
 </a>
 
 
 
 ## 🚀 Getting Started
 
-Check out our [documentation](https://awslabs.github.io/agent-squad/) for comprehensive guides on setting up and using the Agent Squad!
+Check out our [documentation](https://2fastlabs.github.io/agent-squad/) for comprehensive guides on setting up and using the Agent Squad!
 
 
 
@@ -262,11 +262,11 @@ pip install ./dist/agent_squad-1.2.3-py3-none-any.whl
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](https://raw.githubusercontent.com/awslabs/agent-squad/main/CONTRIBUTING.md) for more details.
+We welcome contributions! Please see our [Contributing Guide](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/CONTRIBUTING.md) for more details.
 
 ## 📄 LICENSE
 
-This project is licensed under the Apache 2.0 licence - see the [LICENSE](https://raw.githubusercontent.com/awslabs/agent-squad/main/LICENSE) file for details.
+This project is licensed under the Apache 2.0 licence - see the [LICENSE](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/LICENSE) file for details.
 
 ## 📄 Font License
 This project uses the JetBrainsMono NF font, licensed under the SIL Open Font License 1.1.
