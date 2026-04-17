@@ -1,6 +1,6 @@
 # BedrockFlowsAgent Example
 
-This example demonstrates how to use the **[BedrockFlowsAgent](https://awslabs.github.io/agent-squad/agents/built-in/bedrock-flows-agent/)** for direct agent invocation, avoiding the multi-agent orchestration when you only need a single specialized agent.
+This example demonstrates how to use the **[BedrockFlowsAgent](https://2fastlabs.github.io/agent-squad/agents/built-in/bedrock-flows-agent/)** for direct agent invocation, avoiding the multi-agent orchestration when you only need a single specialized agent.
 
 ## Direct Agent Usage
 Call your agent directly using:

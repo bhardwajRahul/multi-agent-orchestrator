@@ -33,7 +33,7 @@ Enter your destination and travel duration, and the system will research attract
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/awslabs/agent-squad.git
+git clone https://github.com/2fastlabs/agent-squad.git
 cd agent-squad/examples/python
 python -m venv venv
 source venv/bin/activate # On Windows use `venv\Scripts\activate`
@@ -54,18 +54,18 @@ streamlit run main-app.py
 **Prerequisite**: AWS Account with Amazon Bedrock access (Claude models enabled)
 
 Transform your movie ideas into detailed scripts and cast lists! Our AI agents collaborate:
-- **ScriptWriter** ([BedrockLLMAgent](https://awslabs.github.io/agent-squad/agents/built-in/bedrock-llm-agent) with Claude 3 Sonnet): Creates compelling story outlines
-- **CastingDirector** ([BedrockLLMAgent](https://awslabs.github.io/agent-squad/agents/built-in/bedrock-llm-agent) with Claude 3 Haiku): Researches and suggests perfect casting choices
-- **MovieProducer** ([BedrockLLMAgent](https://awslabs.github.io/agent-squad/agents/built-in/bedrock-llm-agent) with Claude 3.5 Sonnet): Coordinates the entire creative process
-- All coordinated by a  [**Custom Agent**](https://awslabs.github.io/agent-squad/agents/custom-agents)  as Supervisor Agent
+- **ScriptWriter** ([BedrockLLMAgent](https://2fastlabs.github.io/agent-squad/agents/built-in/bedrock-llm-agent) with Claude 3 Sonnet): Creates compelling story outlines
+- **CastingDirector** ([BedrockLLMAgent](https://2fastlabs.github.io/agent-squad/agents/built-in/bedrock-llm-agent) with Claude 3 Haiku): Researches and suggests perfect casting choices
+- **MovieProducer** ([BedrockLLMAgent](https://2fastlabs.github.io/agent-squad/agents/built-in/bedrock-llm-agent) with Claude 3.5 Sonnet): Coordinates the entire creative process
+- All coordinated by a  [**Custom Agent**](https://2fastlabs.github.io/agent-squad/agents/custom-agents)  as Supervisor Agent
 
 ### ✈️ AI Travel Planner
 **Prerequisite**: Anthropic API Key
 
 Your personal travel assistant powered by AI! Experience collaboration between:
-- **ResearcherAgent** ([AnthropicAgent](https://awslabs.github.io/agent-squad/agents/built-in/anthropic-agent) with Claude 3 Haiku): Performs real-time destination research
-- **PlannerAgent** ([AnthropicAgent](https://awslabs.github.io/agent-squad/agents/built-in/anthropic-agent) with Claude 3 Sonnet): Creates personalized day-by-day itineraries
-- Coordinated by a [**Custom Agent**](https://awslabs.github.io/agent-squad/agents/custom-agents) as Supervisor Agent
+- **ResearcherAgent** ([AnthropicAgent](https://2fastlabs.github.io/agent-squad/agents/built-in/anthropic-agent) with Claude 3 Haiku): Performs real-time destination research
+- **PlannerAgent** ([AnthropicAgent](https://2fastlabs.github.io/agent-squad/agents/built-in/anthropic-agent) with Claude 3 Sonnet): Creates personalized day-by-day itineraries
+- Coordinated by a [**Custom Agent**](https://2fastlabs.github.io/agent-squad/agents/custom-agents) as Supervisor Agent
 
 ## 🛠️ Technologies Used
 - Streamlit for UI
@@ -77,7 +77,7 @@ Your personal travel assistant powered by AI! Experience collaboration between:
 ## 📚 Documentation
 
 
-Learn more about the AWS Agent Squad framework, including its features and technical details, by visiting the official [documentation](https://awslabs.github.io/agent-squad/).
+Learn more about the AWS Agent Squad framework, including its features and technical details, by visiting the official [documentation](https://2fastlabs.github.io/agent-squad/).
 
 
 ## 🤝 Contributing
