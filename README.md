@@ -3,8 +3,8 @@
 
 ---
 <p align="center">
-  <strong>📢 New Name Alert:</strong> Multi-Agent Orchestrator is now <strong>Agent Squad!</strong> 🎉<br>
-  Same powerful functionalities, new catchy name. Embrace the squad!
+  <strong>📦 New Home:</strong> Agent Squad has moved! Previously hosted at <strong>awslabs/agent-squad</strong>, this project is now maintained at <strong>2fastlabs/agent-squad</strong>.<br>
+  Please update your bookmarks, clone URLs, and dependencies accordingly.
 </p>
 
 ---
