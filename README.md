@@ -9,6 +9,7 @@
 
 ---
 
+
 <p align="center">
   <a href="https://github.com/2fastlabs/agent-squad"><img alt="GitHub Repo" src="https://img.shields.io/badge/GitHub-Repo-green.svg" /></a>
   <a href="https://www.npmjs.com/package/agent-squad"><img alt="npm" src="https://img.shields.io/npm/v/agent-squad.svg?style=flat-square"></a>
@@ -47,7 +48,7 @@
 - 📦 **Pre-built agents and classifiers** — A variety of ready-to-use agents and multiple classifier implementations available.
 
 
-## What's the Agent Squad ❓
+## What Is Agent Squad ❓
 
 The Agent Squad is a flexible framework for managing multiple AI agents and handling complex conversations. It intelligently routes queries and maintains context across interactions.
 
