@@ -9,7 +9,7 @@ import Foundation
 /// and persistence, scoped by `userId`/`sessionId`. With a `store`, each completed turn (user
 /// transcript + spoken reply) is saved under `slugify(name)`, and prior history is seeded on `start()`.
 /// Shared session plumbing lives in `OpenAIRealtimeSession`; this type holds the single-response turn brain.
-public actor OpenAIVoiceAssistant: OpenAIRealtimeSession {
+public actor OpenAIVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant {
     public nonisolated let modality: RealtimeModality
     public nonisolated let events: AsyncStream<RealtimeEvent>
     nonisolated let continuation: AsyncStream<RealtimeEvent>.Continuation

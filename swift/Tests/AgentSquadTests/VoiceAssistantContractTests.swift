@@ -33,6 +33,14 @@ import Testing
         if case .audioDone(true) = collected[2] {} else { Issue.record("expected interrupted audioDone") }
     }
 
+    // Compile-time guard: both concrete actors must declare VoiceAssistant conformance.
+    // If the conformance is ever dropped this test will fail to compile.
+    @Test func voiceAssistantsConform() {
+        func requireVoiceAssistant(_: any VoiceAssistant.Type) {}
+        requireVoiceAssistant(OpenAIVoiceAssistant.self)
+        requireVoiceAssistant(OpenAIGroundedVoiceAssistant.self)
+    }
+
     // The stream is non-throwing: an in-band `.error` must not end iteration.
     @Test func inBandErrorDoesNotTerminateStream() async throws {
         let session = StubSession()
