@@ -6,17 +6,15 @@ import MCP
 /// `MCPClient` backed by the official MCP Swift SDK (`Client` + `HTTPClientTransport`). The SDK is
 /// confined to this type — nothing above the `MCPClient` seam sees it.
 ///
-/// **Auth:** a Bearer token from `tokenProvider` is fetched at `connect` and added via the
-/// transport's (synchronous) `requestModifier`, so it is fixed for the session. A mid-session
-/// `401` surfaces as a thrown error from a call; the caller recovers by `disconnect()` +
-/// `connect()` to pick up a fresh token. (The SDK's OAuth `authorizer` is the long-term refresh
-/// path.)
+/// HTTP headers (e.g. `Authorization`, `X-Match-Id`) are passed via `headers` and forwarded
+/// unchanged on every request. The MCP server is responsible for interpreting them.
 public actor SDKMCPClient: MCPClient {
     private let clientName: String
     private let clientVersion: String
     private let endpoint: URL
-    private let tokenProvider: (@Sendable () async -> String?)?
     private let streaming: Bool
+    private let headers: [String: String]
+    private let configuration: URLSessionConfiguration
 
     private var client: Client?   // nil until connect()
     private var connectTask: Task<Void, any Error>?   // in-flight connect, so concurrent callers join it
@@ -30,14 +28,16 @@ public actor SDKMCPClient: MCPClient {
         endpoint: URL,
         clientName: String = SDKMCPClient.defaultClientName,
         clientVersion: String = SDKMCPClient.defaultClientVersion,
-        tokenProvider: (@Sendable () async -> String?)? = nil,
-        streaming: Bool = true
+        streaming: Bool = true,
+        headers: [String: String] = [:],
+        configuration: URLSessionConfiguration = .default
     ) {
         self.endpoint = endpoint
         self.clientName = clientName
         self.clientVersion = clientVersion
-        self.tokenProvider = tokenProvider
         self.streaming = streaming
+        self.headers = headers
+        self.configuration = configuration
     }
 
     public func connect() async throws {
@@ -45,19 +45,18 @@ public actor SDKMCPClient: MCPClient {
         if let connectTask { return try await connectTask.value }     // join an in-flight connect
         let task = Task { try await self.performConnect() }
         connectTask = task
-        defer { connectTask = nil }
         try await task.value
     }
 
     private func performConnect() async throws {
-        let token = await tokenProvider?()
+        let headers = self.headers
         let transport = HTTPClientTransport(
             endpoint: endpoint,
+            configuration: configuration,
             streaming: streaming,
             requestModifier: { request in
-                guard let token else { return request }
                 var request = request
-                request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                for (field, value) in headers { request.setValue(value, forHTTPHeaderField: field) }
                 return request
             }
         )
@@ -66,9 +65,11 @@ public actor SDKMCPClient: MCPClient {
             try await client.connect(transport: transport)
         } catch {
             await client.disconnect()   // tear down a half-established transport before rethrowing
+            connectTask = nil           // allow a fresh retry
             throw error
         }
         self.client = client
+        connectTask = nil               // clear only after client is set, so late joiners see client != nil
     }
 
     public func listTools() async throws -> [MCPToolInfo] {
