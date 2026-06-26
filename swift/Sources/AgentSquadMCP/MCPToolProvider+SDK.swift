@@ -14,8 +14,8 @@ extension MCPToolProvider {
         hostArguments: [String: JSONValue] = [:],
         clientName: String = SDKMCPClient.defaultClientName,
         clientVersion: String = SDKMCPClient.defaultClientVersion,
-        tokenProvider: (@Sendable () async -> String?)? = nil,
-        streaming: Bool = true
+        streaming: Bool = true,
+        headers: [String: String] = [:]
     ) {
         guard let url = URL(string: urlString) else {
             preconditionFailure("MCPServer(url:): \"\(urlString)\" is not a valid URL")
@@ -25,8 +25,8 @@ extension MCPToolProvider {
             hostArguments: hostArguments,
             clientName: clientName,
             clientVersion: clientVersion,
-            tokenProvider: tokenProvider,
-            streaming: streaming
+            streaming: streaming,
+            headers: headers
         )
     }
 
@@ -39,24 +39,24 @@ extension MCPToolProvider {
     ///   - hostArguments: values the host supplies on every call (e.g. `["session_id": .string(id)]`),
     ///     hidden from the model's schema and injected per call — see ``init(client:hostArguments:)``.
     ///   - clientName / clientVersion: identity sent on the MCP handshake.
-    ///   - tokenProvider: optional Bearer token fetched at connect (per-session); a mid-session `401`
-    ///     is recovered by reconnecting.
     ///   - streaming: whether the transport uses HTTP streaming (default `true`).
+    ///   - headers: HTTP headers forwarded unchanged on every request (e.g. `["Authorization": "Bearer \(token)", "X-Match-Id": id]`).
+    ///     The MCP server is responsible for interpreting them.
     public init(
         url: URL,
         hostArguments: [String: JSONValue] = [:],
         clientName: String = SDKMCPClient.defaultClientName,
         clientVersion: String = SDKMCPClient.defaultClientVersion,
-        tokenProvider: (@Sendable () async -> String?)? = nil,
-        streaming: Bool = true
+        streaming: Bool = true,
+        headers: [String: String] = [:]
     ) {
         self.init(
             client: SDKMCPClient(
                 endpoint: url,
                 clientName: clientName,
                 clientVersion: clientVersion,
-                tokenProvider: tokenProvider,
-                streaming: streaming
+                streaming: streaming,
+                headers: headers
             ),
             hostArguments: hostArguments
         )

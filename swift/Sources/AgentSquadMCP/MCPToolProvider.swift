@@ -22,8 +22,8 @@ public actor MCPToolProvider: ToolProvider {
     ///   `["session_id": .string(sessionId)]`). Hiding/injection inspects only the schema's **top-level**
     ///   `properties`/`required` — a key declared solely inside `oneOf`/`allOf`/`$ref`/`$defs` is neither
     ///   hidden nor injected (host arguments are conventionally flat top-level scalars). The value is a
-    ///   fixed `JSONValue` for the provider's lifetime; per-turn rotation (e.g. a refreshing token)
-    ///   belongs on the `MCPClient`'s `tokenProvider`, not here.
+    ///   fixed `JSONValue` for the provider's lifetime; per-turn credential rotation belongs in a
+    ///   custom `MCPClient` implementation, not here.
     public init(client: any MCPClient, hostArguments: [String: JSONValue] = [:]) {
         self.client = client
         self.hostArguments = hostArguments

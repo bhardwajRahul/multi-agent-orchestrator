@@ -42,3 +42,7 @@ Package.resolved
 logs/
 *.zip
 TODO.md
+
+# Local Claude Code configuration (personal, not for contributors)
+CLAUDE.md
+.claude/

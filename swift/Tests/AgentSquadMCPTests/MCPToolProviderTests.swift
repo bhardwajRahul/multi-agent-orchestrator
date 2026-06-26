@@ -57,6 +57,65 @@ import Testing
         #expect(tools.map(\.name) == ["matches"])
     }
 
+    @Test func mcpServerAcceptsCustomHeaders() {
+        // Compile-time + construction smoke: both URL overloads accept headers and forward them.
+        let viaString: any ToolProvider = MCPServer(
+            url: "https://example.test/mcp",
+            headers: ["Authorization": "Bearer tok", "X-Match-Id": "42"]
+        )
+        _ = viaString
+
+        let viaURL: any ToolProvider = MCPServer(
+            url: URL(string: "https://example.test/mcp")!,
+            headers: ["Authorization": "Bearer tok", "X-Match-Id": "42"]
+        )
+        _ = viaURL
+    }
+
+    @Test func sdkMCPClientForwardsHeadersOnWire() async throws {
+        // Verify that headers passed to SDKMCPClient actually reach the outgoing URLRequest.
+        // Uses a URLProtocol stub to intercept the first POST without a real server.
+        final class CapturingProtocol: URLProtocol, @unchecked Sendable {
+            // nonisolated(unsafe): intentional — single test, reset before use, no concurrent access.
+            nonisolated(unsafe) static var capturedRequest: URLRequest?
+            override class func canInit(with request: URLRequest) -> Bool { true }
+            override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+            override func startLoading() {
+                CapturingProtocol.capturedRequest = request
+                // Return a minimal HTTP 200 to satisfy URLSession; connect() will still fail the MCP
+                // handshake, which is fine — we only need the outgoing request to be intercepted.
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: ["Content-Type": "application/json"]
+                )!
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                client?.urlProtocol(self, didLoad: Data("{}".utf8))
+                client?.urlProtocolDidFinishLoading(self)
+            }
+            override func stopLoading() {}
+        }
+
+        CapturingProtocol.capturedRequest = nil   // reset before use; static state persists across runs
+
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [CapturingProtocol.self]
+
+        let client = SDKMCPClient(
+            endpoint: URL(string: "https://example.test/mcp")!,
+            headers: ["X-Match-Id": "42", "Authorization": "Bearer tok"],
+            configuration: config
+        )
+
+        // connect() will fail (no real MCP server), but the first POST will have been intercepted.
+        try? await client.connect()
+
+        let captured = try #require(CapturingProtocol.capturedRequest, "URLProtocol stub never intercepted a request")
+        #expect(captured.value(forHTTPHeaderField: "X-Match-Id") == "42")
+        #expect(captured.value(forHTTPHeaderField: "Authorization") == "Bearer tok")
+    }
+
     @Test func listToolsMapsAndFiltersToModelVisible() async throws {
         let mock = MockMCPClient(tools: [
             MCPToolInfo(name: "get_odds", description: "1X2 odds", inputSchema: .object([:]), ui: "ui://sport/matches"),
