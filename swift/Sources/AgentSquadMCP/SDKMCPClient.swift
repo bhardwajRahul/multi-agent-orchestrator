@@ -1,0 +1,150 @@
+import Foundation
+
+import AgentSquad
+import MCP
+
+/// `MCPClient` backed by the official MCP Swift SDK (`Client` + `HTTPClientTransport`). The SDK is
+/// confined to this type — nothing above the `MCPClient` seam sees it.
+///
+/// **Auth:** a Bearer token from `tokenProvider` is fetched at `connect` and added via the
+/// transport's (synchronous) `requestModifier`, so it is fixed for the session. A mid-session
+/// `401` surfaces as a thrown error from a call; the caller recovers by `disconnect()` +
+/// `connect()` to pick up a fresh token. (The SDK's OAuth `authorizer` is the long-term refresh
+/// path.)
+public actor SDKMCPClient: MCPClient {
+    private let clientName: String
+    private let clientVersion: String
+    private let endpoint: URL
+    private let tokenProvider: (@Sendable () async -> String?)?
+    private let streaming: Bool
+
+    private var client: Client?   // nil until connect()
+    private var connectTask: Task<Void, any Error>?   // in-flight connect, so concurrent callers join it
+
+    /// Default handshake identity, shared with `MCPServer`'s convenience initializers so the two
+    /// construction paths never drift apart.
+    public static let defaultClientName = "AgentSquad"
+    public static let defaultClientVersion = "0.1.0"
+
+    public init(
+        endpoint: URL,
+        clientName: String = SDKMCPClient.defaultClientName,
+        clientVersion: String = SDKMCPClient.defaultClientVersion,
+        tokenProvider: (@Sendable () async -> String?)? = nil,
+        streaming: Bool = true
+    ) {
+        self.endpoint = endpoint
+        self.clientName = clientName
+        self.clientVersion = clientVersion
+        self.tokenProvider = tokenProvider
+        self.streaming = streaming
+    }
+
+    public func connect() async throws {
+        if client != nil { return }                                   // already connected
+        if let connectTask { return try await connectTask.value }     // join an in-flight connect
+        let task = Task { try await self.performConnect() }
+        connectTask = task
+        defer { connectTask = nil }
+        try await task.value
+    }
+
+    private func performConnect() async throws {
+        let token = await tokenProvider?()
+        let transport = HTTPClientTransport(
+            endpoint: endpoint,
+            streaming: streaming,
+            requestModifier: { request in
+                guard let token else { return request }
+                var request = request
+                request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                return request
+            }
+        )
+        let client = Client(name: clientName, version: clientVersion)
+        do {
+            try await client.connect(transport: transport)
+        } catch {
+            await client.disconnect()   // tear down a half-established transport before rethrowing
+            throw error
+        }
+        self.client = client
+    }
+
+    public func listTools() async throws -> [MCPToolInfo] {
+        let client = try requireClient()
+        // Paginate to completion. Guard against a cycling server by checking each cursor
+        // (incl. A→B→A cycles) before fetching it again.
+        var tools: [Tool] = []
+        var cursor: String?
+        var seenCursors = Set<String>()
+        while true {
+            if let cursor {
+                guard !seenCursors.contains(cursor) else { break }
+                seenCursors.insert(cursor)
+            }
+            let page = try await client.listTools(cursor: cursor)
+            tools += page.tools
+            guard let next = page.nextCursor else { break }
+            cursor = next
+        }
+
+        return tools.map { tool in
+            MCPToolInfo(
+                name: tool.name,
+                description: tool.description ?? "",
+                inputSchema: Bridging.toJSON(tool.inputSchema),
+                ui: Bridging.uiResourceURI(tool._meta?.fields),
+                visibility: Bridging.visibility(tool._meta?.fields)
+            )
+        }
+    }
+
+    public func callTool(name: String, arguments: JSONValue) async throws -> MCPCallResult {
+        let client = try requireClient()
+        // Use the full-result overload (the tuple overload drops structuredContent/_meta); the
+        // explicit `RequestContext` type annotation forces that overload.
+        let context: RequestContext<CallTool.Result> = try await client.callTool(
+            name: name,
+            arguments: Bridging.arguments(arguments)
+        )
+        let result = try await context.value
+        return MCPCallResult(
+            content: Bridging.content(result.content),
+            structuredContent: result.structuredContent.map(Bridging.toJSON),
+            meta: Bridging.metaToJSON(result._meta?.fields),
+            isError: result.isError ?? false
+        )
+    }
+
+    public func readResource(uri: String) async throws -> MCPResourceContents {
+        let client = try requireClient()
+        let contents = try await client.readResource(uri: uri)
+        guard let first = contents.first else { throw MCPClientError.emptyResource(uri) }
+        return MCPResourceContents(
+            mimeType: first.mimeType ?? "application/octet-stream",
+            text: first.text,
+            blob: first.blob.flatMap { Data(base64Encoded: $0) },
+            meta: nil   // resource _meta → UISecurity is the UI host's concern, not parsed here
+        )
+    }
+
+    public func disconnect() async {
+        await client?.disconnect()
+        client = nil   // idempotent: a second disconnect is a no-op
+    }
+
+    // MARK: - Private
+
+    private func requireClient() throws -> Client {
+        guard let client else { throw MCPClientError.notConnected }
+        return client
+    }
+}
+
+/// Failures from `SDKMCPClient` that are infrastructure-level (transport/protocol/lifecycle) and so
+/// are thrown, not returned as a tool-level `ToolResult(isError:)`.
+public enum MCPClientError: Error, Sendable {
+    case notConnected
+    case emptyResource(String)
+}

@@ -34,3 +34,11 @@ examples/chat-chainlit-app/venv
 
 git-release-notes.genai.mjs
 
+
+# Swift package (root manifest builds here)
+.build/
+.swiftpm/
+Package.resolved
+logs/
+*.zip
+TODO.md

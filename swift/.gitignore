@@ -1,0 +1,17 @@
+# Build & tooling
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj
+Package.resolved
+
+# Docs site (Astro)
+docs/node_modules/
+docs/dist/
+docs/.astro/
+
+# Local-only — never publish
+.dev/
+CLAUDE.md
+.DS_Store
+*.zip
