@@ -8,7 +8,7 @@ import Foundation
 ///
 /// Reuses the shared grounding core (`Grounding`, `ToolOutputCurator`, `PresenterPrompt`) verbatim, and
 /// the shared session plumbing in `OpenAIRealtimeSession`; this type holds the two-phase turn brain.
-public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession {
+public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant {
     public nonisolated let modality: RealtimeModality
     public nonisolated let events: AsyncStream<RealtimeEvent>
     nonisolated let continuation: AsyncStream<RealtimeEvent>.Continuation
