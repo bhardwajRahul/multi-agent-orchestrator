@@ -1,0 +1,35 @@
+name: Run Swift tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "swift/**"
+  pull_request:
+    paths:
+      - "swift/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build_and_test:
+    # Needs a Swift 6.2 toolchain (Xcode 26+). Bump the runner / Xcode once it's on a hosted image.
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9a9194f87191a7e9055e3e9b95b8cfb13023bb08
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build
+        run: swift build -v
+
+      - name: Test
+        run: swift test -v
