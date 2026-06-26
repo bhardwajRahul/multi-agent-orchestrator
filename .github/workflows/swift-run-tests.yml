@@ -6,9 +6,13 @@ on:
       - main
     paths:
       - "swift/**"
+      - "Package.swift"
+      - "Package.resolved"
   pull_request:
     paths:
       - "swift/**"
+      - "Package.swift"
+      - "Package.resolved"
   workflow_dispatch:
 
 permissions:
