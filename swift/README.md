@@ -43,7 +43,7 @@ classifier routing, and pluggable chat storage — plus what an on-device assist
 ## How it works
 
 <p align="center">
-  <img src="docs/how-it-works.png" width="880" alt="High-level flow: user input goes to a Classifier, which uses the chat history to select an agent; the chosen agent (Agent, GroundedAgent, or your own) processes the turn and replies; the chat history is read and saved along the way — all running on device.">
+  <img src="../docs/public/how-it-works.png" width="880" alt="High-level flow: user input goes to a Classifier, which uses the chat history to select an agent; the chosen agent (Agent, GroundedAgent, or your own) processes the turn and replies; the chat history is read and saved along the way — all running on device.">
 </p>
 
 1. **Classify** — user input arrives and the Classifier reads it (with the chat history) to route the turn.
@@ -58,7 +58,7 @@ Single-agent apps skip the classifier entirely — the orchestrator just runs yo
 `GroundedAgent` is the framework's anti-hallucination pattern: **two LLMs**, not one.
 
 <p align="center">
-  <img src="docs/grounded-agent.png" width="880" alt="GroundedAgent: a Brain LLM runs the tools with the full context (one prompt for all tools, plus the chat history); a Tool Output Curator shapes the gathered results; a tool-less Presenter LLM — no history, no tool responses, just a per-data prompt — speaks grounded only on that tool output.">
+  <img src="../docs/public/grounded-agent.png" width="880" alt="GroundedAgent: a Brain LLM runs the tools with the full context (one prompt for all tools, plus the chat history); a Tool Output Curator shapes the gathered results; a tool-less Presenter LLM — no history, no tool responses, just a per-data prompt — speaks grounded only on that tool output.">
 </p>
 
 - **Brain** — one system prompt (shared across all tools) with full instructions, the chat history, and the tools. It
@@ -112,7 +112,7 @@ the like) — you choose per agent. When a tool has a UI to show, the framework 
 **widget** next to the reply, or fold everything into a text-only answer.
 
 <p align="center">
-  <img src="docs/mock-compare.png" width="560" alt="The same chat answer side by side: left, with a product-card widget plus a short line of grounded text; right, text only.">
+  <img src="../docs/public/mock-compare.png" width="560" alt="The same chat answer side by side: left, with a product-card widget plus a short line of grounded text; right, text only.">
 </p>
 
 → How a tool UI flows through the agent: **[docs/tool-uis.md](docs/tool-uis.md)**.
