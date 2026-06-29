@@ -23,10 +23,11 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@astrojs/starlight": "^0.30.3",
-    "astro": "^5.15.7",
+    "@astrojs/starlight": "^0.38.5",
+    "astro": "^6.4.8",
     "sharp": "^0.33.4",
-    "shiki": "^1.10.3"
+    "shiki": "^1.10.3",
+    "starlight-sidebar-topics": "^0.6.2"
   },
   "devDependencies": {
     "rimraf": "^5.0.7"

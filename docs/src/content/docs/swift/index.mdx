@@ -1,0 +1,62 @@
+---
+title: AgentSquad for Swift
+description: A lightweight, protocol-driven multi-agent framework for Apple platforms — on-device orchestration, MCP tools, realtime voice, and first-class tracing.
+template: splash
+hero:
+  tagline: On-device multi-agent orchestration, MCP tools, realtime voice, and first-class tracing — small protocols you extend.
+  actions:
+    - text: Quick start
+      link: /agent-squad/swift/quick-start/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/2FastLabs/agent-squad
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+A multi-agent framework built to **run on device**: small protocols you extend, swappable agents,
+classifier routing, and pluggable chat storage — plus what an on-device assistant needs.
+
+:::caution[Work in progress]
+Built incrementally, one reviewed component at a time. The public API is not yet stable.
+:::
+
+<CardGrid stagger>
+  <Card title="Swappable agents" icon="puzzle">
+    A simple single-LLM `Agent`, or a grounded *Brain → Presenter* `GroundedAgent` that answers
+    only from what the tools actually returned.
+  </Card>
+  <Card title="Tools from any source" icon="setting">
+    MCP servers, native Swift functions, or a mix — the agent doesn't care where a tool comes from.
+  </Card>
+  <Card title="Realtime voice" icon="microphone">
+    Natural spoken conversations with interrupt-to-speak, as a first-class runtime.
+  </Card>
+  <Card title="Built-in tracing" icon="approve-check">
+    See every step of a run — locally during development, or shipped to your observability tool.
+  </Card>
+  <Card title="Local-first history" icon="document">
+    Conversations persist on device, with storage you can swap out.
+  </Card>
+  <Card title="Text or rich UI" icon="laptop">
+    Answers come back as plain text or as text plus interactive widgets — your choice per agent.
+  </Card>
+</CardGrid>
+
+## Requirements
+
+- **iOS 16+** / **macOS 14+**
+- **Swift 6.2** toolchain (Xcode 26+), Swift 6 language mode
+
+The whole framework runs on iOS 16+, including the bundled `FileChatStorage`. The one piece gated
+higher is `DeviceChatStorage` (SwiftData), which needs iOS 17+ / macOS 14+.
+
+## Where to next
+
+- New here? Start with the **[Quick start](/agent-squad/swift/quick-start/)**.
+- Want the big picture? Read **[Orchestrator](/agent-squad/swift/orchestrator/overview/)** and **[Agents](/agent-squad/swift/agents/overview/)**.
+- Fighting hallucination? See **[GroundedAgent](/agent-squad/swift/agents/built-in/grounded-agent/)**.
+- Want to swap a piece? See **[Extending the framework](/agent-squad/swift/guides/extending/)**.
+- Building with an AI assistant? See **[the guide](/agent-squad/swift/guides/building-with-ai/)**.
