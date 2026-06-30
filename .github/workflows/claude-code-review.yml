@@ -50,7 +50,13 @@ jobs:
             - Storage or serialisation formats change in a backward-incompatible way
             - A previously optional dependency becomes required
             - New fields on dataclasses/interfaces/options objects are not optional with sensible defaults
-            After verifying backward compatibility, continue with the standard code review.
+            After verifying backward compatibility, check documentation:
+            Every code change must include a documentation update. Flag as REQUIRED if:
+            - A new class, method, option, or field has no documentation update in docs/, README, or docstrings
+            - Changed behaviour, renamed option, or updated default is not reflected in docs/ or README
+            - Documentation still describes old or removed behaviour
+
+            After both checks pass, continue with the standard code review.
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
