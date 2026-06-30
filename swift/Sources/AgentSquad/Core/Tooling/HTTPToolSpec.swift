@@ -175,7 +175,13 @@ public struct HTTPToolSpec: Sendable {
         var urlString = url
         for key in Self.templateKeys(in: url) {
             let raw = args[key].map(Self.scalarString) ?? ""
-            let encoded = raw.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? raw
+            // Use the correct character set depending on whether the placeholder is in the query
+            // string or the path. Path-component encoding forbids '/' (prevents segment injection);
+            // query-value encoding forbids '&', '=', '+', '#' (prevents parameter injection).
+            let charset: CharacterSet = Self.isInQueryPart(url, key: key)
+                ? Self.urlQueryValueAllowed
+                : .urlPathComponentAllowed
+            let encoded = raw.addingPercentEncoding(withAllowedCharacters: charset) ?? raw
             urlString = urlString.replacingOccurrences(of: "{\(key)}", with: encoded)
             args.removeValue(forKey: key)
         }
@@ -237,6 +243,23 @@ public struct HTTPToolSpec: Sendable {
             return String(decoding: data, as: UTF8.self)
         }
     }
+
+    /// Returns true when the `{key}` placeholder appears after the first `?` in the URL template,
+    /// meaning its value will land in the query string rather than the path.
+    static func isInQueryPart(_ url: String, key: String) -> Bool {
+        let placeholder = "{\(key)}"
+        guard let placeholderRange = url.range(of: placeholder),
+              let questionMark = url.firstIndex(of: "?") else { return false }
+        return placeholderRange.lowerBound > questionMark
+    }
+
+    /// Character set safe for percent-encoding a query-item value. Starts from `.urlQueryAllowed`
+    /// and removes delimiter characters that would otherwise split or corrupt the query string.
+    private static let urlQueryValueAllowed: CharacterSet = {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&=+#")
+        return allowed
+    }()
 
     /// Merge host arguments into a call's arguments (host values win). Injects all of them, not just
     /// schema-declared keys (unlike MCP) — a host value may feed a `{token}` path slot or query item.

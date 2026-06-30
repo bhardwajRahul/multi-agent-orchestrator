@@ -45,6 +45,27 @@ private func queryValue(_ request: URLRequest?, _ name: String) -> String? {
         #expect(queryValue(request, "live") == "true")
     }
 
+    @Test func pathPlaceholderEncodesSlash() throws {
+        // A value containing '/' must not create extra path segments.
+        let spec = HTTPToolSpec(method: .get, url: "https://api.test/users/{id}/profile")
+        let request = try spec.makeRequest(arguments: ["id": "foo/bar"])
+        #expect(request.url?.absoluteString.contains("/users/foo%2Fbar/profile") == true)
+    }
+
+    @Test func queryPlaceholderEncodesDelimiters() throws {
+        // A value containing '&' or '=' must not create extra query parameters.
+        let spec = HTTPToolSpec(method: .get, url: "https://api.test/search?q={query}")
+        let request = try spec.makeRequest(arguments: ["query": "a&b=c"])
+        let urlString = request.url?.absoluteString ?? ""
+        // The '&' and '=' must be percent-encoded so they don't split the query string.
+        #expect(urlString.contains("a%26b%3Dc") == true)
+        // Only one query item: 'q'
+        let components = URLComponents(string: urlString)
+        #expect(components?.queryItems?.count == 1)
+        #expect(components?.queryItems?.first?.name == "q")
+        #expect(components?.queryItems?.first?.value == "a&b=c")
+    }
+
     @Test func postSendsJSONBodyWithContentType() throws {
         let spec = HTTPToolSpec(method: .post, url: "https://api.test/bets")
         let request = try spec.makeRequest(arguments: ["stake": 10, "selection": "home"])
@@ -64,6 +85,26 @@ private func queryValue(_ request: URLRequest?, _ name: String) -> String? {
         let request = try spec.makeRequest(arguments: .object([:]))
         #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer tok")
+    }
+
+    // MARK: - HTTPToolGroup URL joining
+
+    @Test func groupNormalizesDoubleSlash() async throws {
+        // baseURL trailing '/' + path leading '/' must not produce a double slash.
+        let invoker = MockInvoker(status: 200, body: "{}")
+        let group = HTTPToolGroup(baseURL: "https://api.test/", invoker: invoker)
+        let tool = group.get("users", "/users", "")
+        _ = try await tool.run(.object([:]))
+        #expect(invoker.request?.url?.absoluteString == "https://api.test/users")
+    }
+
+    @Test func groupAddsSlashWhenBothMissing() async throws {
+        // Neither baseURL nor path has a separator — a '/' must be inserted.
+        let invoker = MockInvoker(status: 200, body: "{}")
+        let group = HTTPToolGroup(baseURL: "https://api.test", invoker: invoker)
+        let tool = group.get("items", "items", "")
+        _ = try await tool.run(.object([:]))
+        #expect(invoker.request?.url?.absoluteString == "https://api.test/items")
     }
 
     // MARK: - Host arguments
