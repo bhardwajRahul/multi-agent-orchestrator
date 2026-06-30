@@ -3,9 +3,17 @@ title: Tools Overview
 description: AgentTool, ToolProvider, ToolResult, ToolVisibility, and JSONValue — the core primitives every tool integration builds on.
 ---
 
-Tools are functions an agent can call during inference. AgentSquad is provider-agnostic: an agent receives a `ToolProvider` and never cares whether the tools behind it are native Swift closures, MCP servers, or a mix of both.
+Tools are functions an agent can call during inference. AgentSquad is provider-agnostic: an agent receives a `ToolProvider` and never cares whether the tools behind it are native Swift closures, HTTP APIs, MCP servers, or a mix of all three.
 
-Built-in tools come from the MCP module (see [MCP Overview](/agent-squad/swift/mcp/overview/)). To write your own native Swift tools, see [Custom Tools](/agent-squad/swift/tools/custom/).
+This page covers the core primitives. The built-in providers each have their own page:
+
+| Provider | Use it for |
+|----------|------------|
+| [Local & HTTP tools](/agent-squad/swift/tools/built-in/local-http/) | Local Swift closures (`Tool.local`) and declarative HTTP APIs (`Tool.http`, `HTTPToolGroup`) |
+| [Composing providers](/agent-squad/swift/tools/built-in/composing/) | `AggregateToolProvider` — local + API + MCP behind one seam |
+| [MCP servers](/agent-squad/swift/mcp/overview/) | `MCPServer(url:)` — connect a remote MCP server |
+
+To build a provider from scratch, see [Custom Tools](/agent-squad/swift/tools/custom/).
 
 ## `AgentTool`
 
@@ -16,6 +24,7 @@ public struct AgentTool: Sendable, Equatable, Hashable {
     public let name: String
     public let description: String
     public let inputSchema: JSONValue        // JSON Schema; defaults to {"type":"object"}
+    public let outputSchema: JSONValue?      // advisory result schema; NOT sent to the model; nil if none
     public let ui: String?                  // ui:// resource URI, nil if no tool UI
     public let visibility: ToolVisibility
 
@@ -24,7 +33,8 @@ public struct AgentTool: Sendable, Equatable, Hashable {
         description: String,
         inputSchema: JSONValue = .object(["type": "object"]),
         ui: String? = nil,
-        visibility: ToolVisibility = .all
+        visibility: ToolVisibility = .all,
+        outputSchema: JSONValue? = nil
     )
 }
 ```
@@ -121,10 +131,10 @@ let schema: JSONValue = [
 ]
 ```
 
-Subscript with a `String` key to read object fields:
+Read object fields with a `String` subscript and typed accessors (`stringValue`, `intValue`, `boolValue`, `doubleValue`); both return `nil` on a wrong-shape or missing value, so chaining is safe:
 
 ```swift
-if case .string(let city) = arguments["city"] { ... }
+let city = arguments["city"]?.stringValue
 ```
 
 :::caution[Number encoding]
@@ -135,8 +145,10 @@ Whole-number `Double` values decode to `.int` (e.g. `1.0` → `.int(1)`). Intege
 
 | Source | How |
 |--------|-----|
-| MCP servers | `AgentSquadMCP` module exposes a `ToolProvider` backed by an MCP session — see [MCP Overview](/agent-squad/swift/mcp/overview/) |
-| Native Swift | Conform to `ToolProvider` directly — see [Custom Tools](/agent-squad/swift/tools/custom/) |
-| Composed | Write a `CompositeToolProvider` that fans out across multiple providers — see [Custom Tools](/agent-squad/swift/tools/custom/) |
+| Local Swift | `Tool.local` in a [`ToolKit`](/agent-squad/swift/tools/built-in/local-http/) |
+| HTTP APIs | `Tool.http` / `HTTPToolGroup` in a [`ToolKit`](/agent-squad/swift/tools/built-in/local-http/) |
+| MCP servers | [`MCPServer(url:)`](/agent-squad/swift/mcp/overview/) from the `AgentSquadMCP` module |
+| Composed | [`AggregateToolProvider`](/agent-squad/swift/tools/built-in/composing/) |
+| Fully custom | Conform to `ToolProvider` directly — see [Custom Tools](/agent-squad/swift/tools/custom/) |
 
 Pass the provider when constructing an agent — see [Agents Overview](/agent-squad/swift/agents/overview/) for how each agent type accepts a `ToolProvider`.

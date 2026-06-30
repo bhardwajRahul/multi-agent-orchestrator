@@ -3,6 +3,10 @@ title: Custom Tools
 description: Implement the ToolProvider protocol in native Swift to give agents access to any API or business logic.
 ---
 
+:::tip[Reach for the built-ins first]
+Most tools don't need a custom provider. Use [`ToolKit`](/agent-squad/swift/tools/overview/#toolkit-local--api-tools) with `Tool.local` (Swift code) and `Tool.http` (HTTP APIs), and [`AggregateToolProvider`](/agent-squad/swift/tools/overview/#aggregatetoolprovider-mixing-sources) to combine sources. Conform to `ToolProvider` directly only when you need something they don't cover — a **dynamic** tool list, stateful per-session behaviour, or custom dispatch.
+:::
+
 Conform to [`ToolProvider`](/agent-squad/swift/tools/overview/) directly to expose any Swift function as a callable tool. The protocol has two requirements: `listTools` (declare what exists) and `call` (execute by name).
 
 For a full explanation of `AgentTool`, `ToolResult`, `ToolVisibility`, and `JSONValue`, see [Tools Overview](/agent-squad/swift/tools/overview/).
@@ -56,30 +60,18 @@ Use pattern matching on `JSONValue` cases (`case .string(let v) = arguments["key
 
 ## Composing multiple providers
 
-Fan out across several providers behind a single `ToolProvider` seam:
+You don't need to hand-write a composite — [`AggregateToolProvider`](/agent-squad/swift/tools/overview/#aggregatetoolprovider-mixing-sources) is built in. It fans out `listTools` in parallel, deduplicates by name (first-wins), and routes each `call` to the owning provider:
 
 ```swift
-struct CompositeToolProvider: ToolProvider {
-    let providers: [any ToolProvider]
-
-    func listTools() async throws -> [AgentTool] {
-        try await providers.asyncFlatMap { try await $0.listTools() }
-    }
-
-    func call(_ name: String, arguments: JSONValue) async throws -> ToolResult {
-        for provider in providers {
-            let available = try await provider.listTools()
-            if available.contains(where: { $0.name == name }) {
-                return try await provider.call(name, arguments: arguments)
-            }
-        }
-        return .failure("Unknown tool: \(name)")
-    }
-}
+let tools = AggregateToolProvider([
+    myCustomProvider,
+    ToolKit([localTool, apiTool]),
+    MCPServer(url: "https://mcp/sse"),
+])
 ```
 
 :::caution[Name uniqueness]
-The agent deduplicates tools by name when merging lists. If two providers advertise the same name, the first one wins. Keep tool names unique across all providers in a composite.
+Tools are deduplicated by name when lists are merged. If two providers advertise the same name, the first one (earlier in the array) wins. Keep tool names unique across all providers.
 :::
 
 ## Controlling visibility
@@ -102,13 +94,13 @@ AgentTool(
 
 ## Using MCP tools alongside native tools
 
-MCP-backed tools arrive as a `ToolProvider` from the `AgentSquadMCP` module. Wrap them together with your native provider in a `CompositeToolProvider`:
+MCP-backed tools arrive as a `ToolProvider` (`MCPServer`) from the `AgentSquadMCP` module. Combine them with your native tools using `AggregateToolProvider`:
 
 ```swift
-let composite = CompositeToolProvider(providers: [
-    nativeProvider,
-    mcpProvider          // from AgentSquadMCP
+let tools = AggregateToolProvider([
+    nativeProvider,                          // your custom ToolProvider
+    MCPServer(url: "https://mcp/sse"),       // from AgentSquadMCP
 ])
 ```
 
-See [MCP Overview](/agent-squad/swift/mcp/overview/) for session setup.
+See [MCP servers](/agent-squad/swift/mcp/overview/) for session setup. To plug a different MCP SDK or transport, conform your own type to `MCPClient` — see [Custom MCP client](/agent-squad/swift/mcp/custom/).

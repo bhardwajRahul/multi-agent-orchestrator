@@ -43,7 +43,7 @@ enum Bridging {
 
     /// SDK content blocks → `ContentPart`s. Non-text blocks aren't dropped silently — they become
     /// a visible placeholder so an image/audio-only result isn't an empty-looking success.
-    static func content(_ blocks: [Tool.Content]) -> [ContentPart]? {
+    static func content(_ blocks: [MCP.Tool.Content]) -> [ContentPart]? {
         guard !blocks.isEmpty else { return nil }
         return blocks.map { block in
             if case .text(let text, _, _) = block { return .text(text) }

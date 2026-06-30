@@ -192,8 +192,10 @@ for try await event in orchestrator.route(.text("where is my order #1234?"),
 }
 ```
 
-From here: give an agent a `ToolProvider` for tools, or swap `Agent` for `GroundedAgent` — none of
-it changes the call site.
+From here: give an agent a `ToolProvider` for tools — build native ones with `ToolKit` (`Tool.local`
+for Swift code, `Tool.http`/`HTTPToolGroup` for APIs), connect an MCP server with `MCPServer(url:)`,
+or mix them with `AggregateToolProvider` — or swap `Agent` for `GroundedAgent`. None of it changes
+the call site.
 
 ## Modules — add only what you use
 
@@ -202,7 +204,7 @@ the integrations you need (each isolates its own dependencies):
 
 | Library | `import` | Pulls in | Contents |
 |---|---|---|---|
-| **`AgentSquad`** (core) | `import AgentSquad` | **nothing external** | protocols, `FileChatStorage`, `DeviceChatStorage` _(iOS 17+)_, `InMemoryChatStorage`, `OSLogTracer`, agents, orchestrator |
+| **`AgentSquad`** (core) | `import AgentSquad` | **nothing external** | protocols, agents, orchestrator, native tools (`ToolKit`, `Tool.local`/`.http`, `HTTPToolGroup`, `AggregateToolProvider`), `FileChatStorage`, `DeviceChatStorage` _(iOS 17+)_, `InMemoryChatStorage`, `OSLogTracer` |
 | **`AgentSquadMCP`** | `import AgentSquadMCP` | the official [MCP Swift SDK](https://github.com/modelcontextprotocol/swift-sdk) | `MCPServer` (alias of `MCPToolProvider`) — connect any MCP server with `MCPServer(url:)`, with MCP Apps UI support |
 
 So an app that doesn't use MCP never downloads the MCP SDK. Future optional integrations

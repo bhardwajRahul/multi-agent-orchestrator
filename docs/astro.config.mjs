@@ -208,7 +208,25 @@ export default defineConfig({
 								label: 'Tools',
 								items: [
 									{ label: 'Overview', slug: 'swift/tools/overview' },
+									{
+										label: 'Built-in tools',
+										items: [
+											{ label: 'Local & HTTP tools', slug: 'swift/tools/built-in/local-http' },
+											{ label: 'Composing providers', slug: 'swift/tools/built-in/composing' },
+											{ label: 'MCP servers', slug: 'swift/mcp/overview' },
+											{ label: 'MCP client (SDKMCPClient)', slug: 'swift/mcp/built-in/sdk-client' },
+										],
+									},
+									{
+										label: 'Tool UIs',
+										items: [
+											{ label: 'Overview', slug: 'swift/ui/overview' },
+											{ label: 'Curators & PresenterPrompt', slug: 'swift/ui/built-in/curators' },
+											{ label: 'Custom curator', slug: 'swift/ui/custom' },
+										],
+									},
 									{ label: 'Custom tool provider', slug: 'swift/tools/custom' },
+									{ label: 'Custom MCP client', slug: 'swift/mcp/custom' },
 								],
 							},
 							{
@@ -254,17 +272,6 @@ export default defineConfig({
 								],
 							},
 							{
-								label: 'Tool UIs',
-								items: [
-									{ label: 'Overview', slug: 'swift/ui/overview' },
-									{
-										label: 'Built-in curators',
-										items: [{ label: 'Curators & PresenterPrompt', slug: 'swift/ui/built-in/curators' }],
-									},
-									{ label: 'Custom curator', slug: 'swift/ui/custom' },
-								],
-							},
-							{
 								label: 'Realtime voice',
 								items: [
 									{ label: 'Overview', slug: 'swift/voice/overview' },
@@ -276,32 +283,25 @@ export default defineConfig({
 											{ label: 'WebSocket transport', slug: 'swift/voice/built-in/websocket-transport' },
 										],
 									},
+									{
+										label: 'Audio',
+										items: [
+											{ label: 'Overview', slug: 'swift/audio/overview' },
+											{ label: 'MicCapture', slug: 'swift/audio/built-in/mic-capture' },
+											{ label: 'AudioPlayback', slug: 'swift/audio/built-in/audio-playback' },
+											{ label: 'Custom audio', slug: 'swift/audio/custom' },
+										],
+									},
 									{ label: 'Custom transport', slug: 'swift/voice/custom' },
 								],
 							},
 							{
-								label: 'MCP',
+								label: 'Examples',
 								items: [
-									{ label: 'Overview', slug: 'swift/mcp/overview' },
-									{
-										label: 'Built-in client',
-										items: [{ label: 'SDKMCPClient', slug: 'swift/mcp/built-in/sdk-client' }],
-									},
-									{ label: 'Custom client', slug: 'swift/mcp/custom' },
-								],
-							},
-							{
-								label: 'Audio',
-								items: [
-									{ label: 'Overview', slug: 'swift/audio/overview' },
-									{
-										label: 'Built-in audio',
-										items: [
-											{ label: 'MicCapture', slug: 'swift/audio/built-in/mic-capture' },
-											{ label: 'AudioPlayback', slug: 'swift/audio/built-in/audio-playback' },
-										],
-									},
-									{ label: 'Custom audio', slug: 'swift/audio/custom' },
+									{ label: 'Overview', slug: 'swift/examples/overview' },
+									{ label: 'Local tool', slug: 'swift/examples/local-tool' },
+									{ label: 'API tools', slug: 'swift/examples/api-tools' },
+									{ label: 'MCP server', slug: 'swift/examples/mcp-server' },
 								],
 							},
 							{
