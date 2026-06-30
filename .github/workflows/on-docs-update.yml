@@ -22,14 +22,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install, build, and upload documentation
-        uses: withastro/action@v2
+        uses: withastro/action@v3
         with:
           path: ./docs
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: ./docs/dist
-
+          node-version: 22          
   # Deploy the documentation to GitHub Pages.
   deploy:
     needs: build
