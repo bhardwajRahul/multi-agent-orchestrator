@@ -48,4 +48,34 @@ import Testing
         let result = try await AggregateToolProvider([a]).call("solo", arguments: .object([:]))
         #expect(result.structuredContent == ["ok": true])
     }
+
+    @Test func appOnlyToolIsCallableThroughAggregate() async throws {
+        // An app-only tool is excluded from listTools() but must still be callable via call().
+        let kit = ToolKit([
+            .local(name: "visible", description: "") { _ in ToolResult() },
+            .local(name: "app_only", description: "", visibility: .app) { _ in
+                ToolResult(structuredContent: ["ran": true])
+            },
+        ])
+        let aggregate = AggregateToolProvider([kit])
+
+        // listTools() must not advertise the app-only tool to the model.
+        let listed = try await aggregate.listTools().map(\.name)
+        #expect(listed == ["visible"])
+
+        // call() must still reach the app-only tool.
+        let result = try await aggregate.call("app_only", arguments: .object([:]))
+        #expect(result.isError == false)
+        #expect(result.structuredContent == ["ran": true])
+    }
+
+    @Test func emptyProvidersHasStableRoutingState() async throws {
+        // An aggregate over zero-tool providers must not re-call listTools() on every call().
+        let empty = StubToolProvider(tools: [], results: [:])
+        let aggregate = AggregateToolProvider([empty])
+        _ = try await aggregate.listTools()
+        // Calling an unknown tool after listTools() must return failure without re-listing.
+        let result = try await aggregate.call("ghost", arguments: .object([:]))
+        #expect(result.isError)
+    }
 }

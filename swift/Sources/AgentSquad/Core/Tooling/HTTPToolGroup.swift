@@ -127,10 +127,18 @@ public struct HTTPToolGroup: Sendable {
             name: name, description: description, inputSchema: arguments.objectSchema(),
             ui: ui, visibility: visibility, outputSchema: outputSchema,
             spec: HTTPToolSpec(
-                method: method, url: baseURL + path,
+                method: method, url: joinURL(path: path),
                 headers: headers, secrets: secrets, hostArguments: hostArguments,
                 body: body, response: response ?? self.response, timeout: timeout, invoker: invoker
             )
         )
+    }
+
+    /// Join `baseURL` and `path`, normalizing trailing/leading slashes so the result always has
+    /// exactly one separator (e.g. avoids `"https://api.test//users"` or `"https://api.testusers"`).
+    private func joinURL(path: String) -> String {
+        let base = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        let sep = path.hasPrefix("/") ? "" : "/"
+        return base + sep + path
     }
 }
