@@ -64,9 +64,12 @@ stream. `.final` is what the orchestrator persists. Inputs/messages are value ty
   Presenter) for answers that must stay grounded in tool results.
 - **`ChatCompletionsClient`** speaks the OpenAI wire — point its `baseURL` at OpenAI, Azure,
   OpenRouter, Groq, or a local Ollama/llama.cpp. Implement `LLMClient` for anything else.
-- **Tools** come from a `ToolProvider` — native Swift, or an MCP server via `MCPServer(url:)`. A
-  `ToolResult` is three-part: text → the model's context, `structuredContent` → curator/UI data,
-  `ui` → an optional widget.
+- **Tools** come from a `ToolProvider`. Built-ins: **`ToolKit`** holds native tools — `Tool.local`
+  (Swift closure) and `Tool.http`/`Tool.get`/`.post` (declarative HTTP, with a `ToolParameter` DSL so
+  you don't hand-write JSON Schema); **`HTTPToolGroup(baseURL:…)`** declares one API's shared
+  config once, then one line per endpoint; **`MCPServer(url:)`** connects an MCP server; and
+  **`AggregateToolProvider`** composes any mix behind one seam. A `ToolResult` is three-part: text →
+  the model's context, `structuredContent` → curator/UI data, `ui` → an optional widget.
 - **`FileChatStorage`** (JSON files, iOS 16+) and **`DeviceChatStorage`** (SwiftData, iOS 17+) persist history on-device; **`InMemoryChatStorage`** is a non-persistent, seedable single-conversation store. **`OSLogTracer`** is the default
   tracer; wire `ProcessingTracer` + `OTLPExporter` to ship traces to Langfuse/LangSmith/Datadog/…
 - **Voice**: two `VoiceAssistant`s over a WebSocket — `OpenAIVoiceAssistant` (single LLM, speaks

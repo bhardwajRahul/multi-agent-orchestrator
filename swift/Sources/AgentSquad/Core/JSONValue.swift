@@ -87,3 +87,35 @@ extension JSONValue: ExpressibleByDictionaryLiteral {
         self = .object(Dictionary(uniqueKeysWithValues: elements))
     }
 }
+
+// MARK: - Reading
+
+extension JSONValue {
+    /// Read a field from an object value: `arguments["city"]`. Returns `nil` for a non-object or a
+    /// missing key — so a chain like `arguments["a"]?["b"]` is safe on any shape.
+    public subscript(key: String) -> JSONValue? {
+        if case .object(let object) = self { return object[key] }
+        return nil
+    }
+
+    /// Read an element from an array value. Returns `nil` for a non-array or an out-of-range index.
+    public subscript(index: Int) -> JSONValue? {
+        guard case .array(let array) = self, array.indices.contains(index) else { return nil }
+        return array[index]
+    }
+
+    /// The wrapped `String`, or `nil` if this isn't a `.string`.
+    public var stringValue: String? { if case .string(let value) = self { return value } else { return nil } }
+    /// The wrapped `Int`, or `nil` if this isn't an `.int`.
+    public var intValue: Int? { if case .int(let value) = self { return value } else { return nil } }
+    /// The wrapped `Bool`, or `nil` if this isn't a `.bool`.
+    public var boolValue: Bool? { if case .bool(let value) = self { return value } else { return nil } }
+    /// The wrapped `Double` — also returns a whole `Int` as a `Double`; `nil` otherwise.
+    public var doubleValue: Double? {
+        switch self {
+        case .double(let value): return value
+        case .int(let value): return Double(value)
+        default: return nil
+        }
+    }
+}

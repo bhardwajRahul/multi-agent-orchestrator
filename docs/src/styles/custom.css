@@ -1,16 +1,7 @@
+/* Accent + gray palette is provided by the starlight-theme-rapide plugin.
+   Only app-specific label colors are kept here. */
 /* Dark mode colors. */
 :root {
-  --sl-color-accent-low: #2c230a;
-  --sl-color-accent: #846500;
-  --sl-color-accent-high: #d4c8ab;
-  --sl-color-white: #ffffff;
-  --sl-color-gray-1: #eceef2;
-  --sl-color-gray-2: #c0c2c7;
-  --sl-color-gray-3: #888b96;
-  --sl-color-gray-4: #545861;
-  --sl-color-gray-5: #353841;
-  --sl-color-gray-6: #24272f;
-  --sl-color-black: #17181c;
   --sl-label-api-color: #dc8686;
   --sl-label-api-background-color: #dc8686;
   --sl-label-version-color: #7ed7c1;
@@ -20,18 +11,6 @@
 }
 /* Light mode colors. */
 :root[data-theme='light'] {
-  --sl-color-accent-low: #dfd6c0;
-  --sl-color-accent: #a90202;
-  --sl-color-accent-high: #3f3003;
-  --sl-color-white: #17181c;
-  --sl-color-gray-1: #24272f;
-  --sl-color-gray-2: #353841;
-  --sl-color-gray-3: #545861;
-  --sl-color-gray-4: #888b96;
-  --sl-color-gray-5: #c0c2c7;
-  --sl-color-gray-6: #eceef2;
-  --sl-color-gray-7: #f5f6f8;
-  --sl-color-black: #ffffff;
   --sl-label-api-color: #c74848;
   --sl-label-api-background-color: #c74848;
   --sl-label-version-color: #3cb99a;

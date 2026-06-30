@@ -76,7 +76,7 @@ public actor SDKMCPClient: MCPClient {
         let client = try requireClient()
         // Paginate to completion. Guard against a cycling server by checking each cursor
         // (incl. A→B→A cycles) before fetching it again.
-        var tools: [Tool] = []
+        var tools: [MCP.Tool] = []
         var cursor: String?
         var seenCursors = Set<String>()
         while true {

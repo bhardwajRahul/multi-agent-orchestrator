@@ -4,6 +4,21 @@ import Testing
 @testable import AgentSquad
 
 @Suite struct JSONValueTests {
+    @Test func subscriptsAndTypedAccessors() {
+        let value: JSONValue = [
+            "name": "PSG",
+            "odds": 1.26,
+            "tags": ["home", "favorite"],
+        ]
+        #expect(value["name"]?.stringValue == "PSG")
+        #expect(value["odds"]?.doubleValue == 1.26)
+        #expect(value["tags"]?[0]?.stringValue == "home")
+        #expect(value["missing"] == nil)            // missing key
+        #expect(value["tags"]?[9] == nil)           // out-of-range index
+        #expect(JSONValue.string("x")["k"] == nil)  // subscript on a non-object
+        #expect(JSONValue.int(3).doubleValue == 3)  // int promotes to double
+    }
+
     @Test func roundTripsNestedValue() throws {
         let value: JSONValue = [
             "name": "PSG",

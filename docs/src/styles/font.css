@@ -34,6 +34,10 @@
 }
 
 :root {
-  --sl-font: "JetBrainsMono NF";
-  --sl-font-mono: "JetBrainsMono NF";
+  /* Body, headings, UI: clean modern sans for legible long-form reading. */
+  --sl-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  /* Code blocks & inline code keep the JetBrains Mono Nerd Font. */
+  --sl-font-mono: "JetBrainsMono NF", ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
 }

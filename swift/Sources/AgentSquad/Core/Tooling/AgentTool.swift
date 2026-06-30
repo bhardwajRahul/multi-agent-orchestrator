@@ -18,6 +18,8 @@ public struct AgentTool: Sendable, Equatable, Hashable {
     public let description: String
     /// JSON Schema for the arguments.
     public let inputSchema: JSONValue
+    /// Advisory JSON Schema for the result's `structuredContent` (UI/curator use). Not sent to the model.
+    public let outputSchema: JSONValue?
     /// The `ui://` resource a tool advertises for its result (MCP Apps); `nil` if it has no UI.
     public let ui: String?
     public let visibility: ToolVisibility
@@ -27,11 +29,13 @@ public struct AgentTool: Sendable, Equatable, Hashable {
         description: String,
         inputSchema: JSONValue = .object(["type": "object"]),
         ui: String? = nil,
-        visibility: ToolVisibility = .all
+        visibility: ToolVisibility = .all,
+        outputSchema: JSONValue? = nil
     ) {
         self.name = name
         self.description = description
         self.inputSchema = inputSchema
+        self.outputSchema = outputSchema
         self.ui = ui
         self.visibility = visibility
     }
