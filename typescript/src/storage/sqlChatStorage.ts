@@ -60,7 +60,7 @@ export class SqlChatStorage extends ChatStorage {
       }
 
       // Begin transaction
-      await this.client.transaction().then(async (tx) => {
+      await this.client.transaction("write").then(async (tx) => {
         // Get the next message index
         const nextIndexResult = await tx.execute({
           sql: /*sql*/`
