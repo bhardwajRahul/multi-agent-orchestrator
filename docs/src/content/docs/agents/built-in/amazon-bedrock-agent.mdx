@@ -263,4 +263,79 @@ To integrate the AmazonBedrockAgent into your Agent Squad, follow these steps:
 
 ---
 
+## Knowledge Base citations
+
+When your Bedrock agent is backed by a **Knowledge Base**, the Amazon Bedrock API returns source citations alongside the response text. `AmazonBedrockAgent` captures these citations and makes them available on the `ConversationMessage` returned by `route_request`.
+
+The `citations` field is `undefined` / `None` when the agent has no Knowledge Base or when the response contains no attribution data, so existing code that does not use citations is completely unaffected.
+
+### Accessing citations
+
+<Tabs syncKey="runtime">
+  <TabItem label="TypeScript" icon="seti:typescript" color="blue">
+```typescript
+const response = await orchestrator.routeRequest(
+  "What is the base rate interest for 30 years?",
+  "user123",
+  "session456"
+);
+
+// The message is on response.output for a non-streaming response
+const message = response.output as ConversationMessage;
+
+if (message.citations && message.citations.length > 0) {
+  for (const citation of message.citations) {
+    const text = citation.generatedResponsePart?.textResponsePart?.text;
+    for (const ref of citation.retrievedReferences ?? []) {
+      const uri = ref.location?.s3Location?.uri ?? ref.location?.webLocation?.url;
+      console.log(`"${text}" — source: ${uri}`);
+    }
+  }
+}
+```
+  </TabItem>
+  <TabItem label="Python" icon="seti:python">
+```python
+response = await orchestrator.route_request(
+    "What is the base rate interest for 30 years?",
+    "user123",
+    "session456"
+)
+
+# The message is on response.output for a non-streaming response
+message = response.output
+
+if message.citations:
+    for citation in message.citations:
+        text = (
+            citation.get("generatedResponsePart", {})
+                    .get("textResponsePart", {})
+                    .get("text")
+        )
+        for ref in citation.get("retrievedReferences", []):
+            location = ref.get("location", {})
+            uri = (
+                location.get("s3Location", {}).get("uri")
+                or location.get("webLocation", {}).get("url")
+            )
+            print(f'"{text}" — source: {uri}')
+```
+  </TabItem>
+</Tabs>
+
+### Citation structure
+
+Each entry in `citations` mirrors the `Citation` object returned by the [Amazon Bedrock InvokeAgent API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_agent-runtime_Citation.html):
+
+| Field | Type | Description |
+|---|---|---|
+| `generatedResponsePart.textResponsePart.text` | string | The portion of the agent's answer this citation covers |
+| `generatedResponsePart.textResponsePart.span` | object | `{ start, end }` character offsets within the full response text |
+| `retrievedReferences` | array | One entry per Knowledge Base source chunk used for this part of the answer |
+| `retrievedReferences[].content.text` | string | The raw text retrieved from the Knowledge Base |
+| `retrievedReferences[].location` | object | Where the source lives — `s3Location.uri`, `webLocation.url`, etc. |
+| `retrievedReferences[].metadata` | object | Any custom metadata attached to the source document |
+
+---
+
 By leveraging the `AmazonBedrockAgent`, you can easily integrate **pre-built Amazon Bedrock agents** into your Agent Squad.
