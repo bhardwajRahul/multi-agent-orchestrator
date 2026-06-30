@@ -86,7 +86,7 @@ import { addUserAgentMiddleware } from '../common/src/awsSdkUtils';
                 'nodeOutputName': 'document'
             }
           ],
-          enableTrace: this.enableTrace
+          ...(this.enableTrace && { enableTrace: true }),
         });
 
         let completion;

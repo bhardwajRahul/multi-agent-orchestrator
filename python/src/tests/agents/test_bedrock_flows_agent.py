@@ -324,6 +324,6 @@ class TestBedrockFlowsAgent:
         assert isinstance(result, ConversationMessage)
         assert result.content == [{'text': 'Response with trace disabled'}]
 
-        # Verify enableTrace was set to False
+        # Verify enableTrace is omitted when False (not sent to the API)
         call_args = self.mock_client.invoke_flow.call_args
-        assert call_args[1]['enableTrace'] is False
+        assert 'enableTrace' not in call_args[1]

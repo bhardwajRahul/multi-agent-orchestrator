@@ -80,10 +80,10 @@ class BedrockFlowsAgent(Agent):
         additional_params: Optional[Dict[str, str]] = None
     ) -> ConversationMessage:
         try:
-            response = self.bedrock_agent_client.invoke_flow(
-                flowIdentifier=self.flowIdentifier,
-                flowAliasIdentifier=self.flowAliasIdentifier,
-                inputs=[
+            invoke_params = {
+                'flowIdentifier': self.flowIdentifier,
+                'flowAliasIdentifier': self.flowAliasIdentifier,
+                'inputs': [
                     {
                         'content': {
                             'document': self.flow_input_encoder(input_text, chat_history=chat_history, user_id=user_id, session_id=session_id, additional_params=additional_params)
@@ -92,8 +92,10 @@ class BedrockFlowsAgent(Agent):
                         'nodeOutputName': 'document'
                     }
                 ],
-                enableTrace=self.enableTrace
-            )
+            }
+            if self.enableTrace:
+                invoke_params['enableTrace'] = True
+            response = self.bedrock_agent_client.invoke_flow(**invoke_params)
 
             if 'responseStream' not in response:
                 raise ValueError("No output received from Bedrock model")
