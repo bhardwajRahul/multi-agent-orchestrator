@@ -476,6 +476,16 @@ Big shout out to our awesome contributors! Thank you for making this project bet
 Please see our [contributing guide](./CONTRIBUTING.md) for guidelines on how to propose bugfixes and improvements.
 
 
+## ❤️ Support Agent Squad
+
+If Agent Squad has helped you or your organization build AI applications faster, consider sponsoring its development.
+
+Your sponsorship helps fund maintenance, documentation, bug fixes, and new features — keeping the project healthy for the entire community.
+
+**[Sponsor Agent Squad on GitHub](https://github.com/sponsors/2FastLabs)**
+
+---
+
 ## 📄 LICENSE
 
 This project is licensed under the Apache 2.0 licence - see the [LICENSE](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/LICENSE) file for details.
