@@ -32,8 +32,19 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      # Relative links in the Swift markdown; the repo-wide check in ts-run-tests only covers https.
+      # lychee-action uses GNU install -t which is unsupported on macOS BSD install, so invoke lychee directly.
+      - name: Check Swift doc links
+        run: |
+          brew install lychee
+          lychee --offline swift/README.md swift/SKILL.md
+
       - name: Build
         run: swift build -v
 
       - name: Test
         run: swift test -v
+
+      # The audio session + mic-permission paths are iOS-only; make sure all targets compile for iOS.
+      - name: Build (iOS)
+        run: xcodebuild -scheme AgentSquad-Package -destination 'generic/platform=iOS' build
