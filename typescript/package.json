@@ -31,6 +31,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.51.0",
     "@aws-sdk/client-bedrock-agent-runtime": "^3.701.0",
+    "@dakera-ai/dakera": "^0.11.100",
     "@aws-sdk/client-bedrock-runtime": "^3.812.0",
     "@aws-sdk/client-comprehend": "^3.637.0",
     "@aws-sdk/client-dynamodb": "^3.621.0",
