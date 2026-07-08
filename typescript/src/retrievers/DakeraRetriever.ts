@@ -1,5 +1,8 @@
 import { Retriever } from "./retriever";
-import { DakeraClient } from "@dakera-ai/dakera";
+// Type-only import: erased at compile time, so it adds no runtime dependency.
+// `@dakera-ai/dakera` is an optional peer dependency, loaded lazily in the
+// constructor below so `agent-squad` installs and imports without it.
+import type { DakeraClient, FilterExpression } from "@dakera-ai/dakera";
 
 /**
  * Interface defining the options for DakeraRetriever.
@@ -14,7 +17,7 @@ export interface DakeraRetrieverOptions {
   /** Maximum number of results to return. Defaults to 10. */
   topK?: number;
   /** Optional Dakera metadata filter applied to the query. */
-  filter?: Record<string, unknown>;
+  filter?: FilterExpression;
 }
 
 /**
@@ -23,6 +26,10 @@ export interface DakeraRetrieverOptions {
  * Uses Dakera's text-query API (server-side embedding) to fetch the most relevant
  * documents for a query, which agents can use as retrieval-augmented context.
  * Extends the base {@link Retriever} class.
+ *
+ * `@dakera-ai/dakera` is an optional peer dependency: it is `require`d lazily in
+ * the constructor, so installing `agent-squad` never pulls it in unless this
+ * retriever is actually used. A clear error is thrown if it is missing.
  */
 export class DakeraRetriever extends Retriever {
   private client: DakeraClient;
@@ -48,7 +55,21 @@ export class DakeraRetriever extends Retriever {
     }
     const baseUrl = this.options.url || process.env.DAKERA_URL || "http://localhost:3000";
 
-    this.client = new DakeraClient({ baseUrl, apiKey });
+    // Lazily load the optional peer dependency. Keeping the require here (rather
+    // than a top-level import) means the SDK is only needed when this retriever
+    // is instantiated, not by everyone who installs agent-squad.
+    let DakeraClientCtor: typeof import("@dakera-ai/dakera").DakeraClient;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      ({ DakeraClient: DakeraClientCtor } = require("@dakera-ai/dakera"));
+    } catch {
+      throw new Error(
+        "DakeraRetriever requires the optional peer dependency '@dakera-ai/dakera'. " +
+          "Install it with: npm install @dakera-ai/dakera",
+      );
+    }
+
+    this.client = new DakeraClientCtor({ baseUrl, apiKey });
   }
 
   /**
@@ -63,7 +84,7 @@ export class DakeraRetriever extends Retriever {
 
     const response = await this.client.queryText(this.options.namespace, text, {
       topK: this.options.topK ?? 10,
-      filter: this.options.filter as never,
+      filter: this.options.filter,
     });
     return response.results;
   }
