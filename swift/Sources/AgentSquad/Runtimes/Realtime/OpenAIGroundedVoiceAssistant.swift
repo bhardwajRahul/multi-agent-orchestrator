@@ -47,6 +47,9 @@ public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant
     private var presenterId: String?
     private var presenterResponses: Set<String> = []
     private var presenterActive = false
+    // When the spoken (presenter/direct) response was created on the wire, so its `presenter`
+    // generation span can be backdated to it for a real latency (the API sends no timing).
+    private var presenterStartedAt: Date?
     // Barge-in truncation: which audio item is playing + how much was sent, vs. the runtime's
     // played-ms clock. NOT cleared by `resetTurn` — `interrupt()` reads it after resetting the turn.
     // Only the in-band `direct` reply is truncatable: the presenter is out-of-band
@@ -223,6 +226,7 @@ public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant
             if (role == "presenter" || role == "direct"), !id.isEmpty {
                 presenterResponses.insert(id)
                 presenterId = id
+                presenterStartedAt = Date()   // anchor the presenter generation's latency to now (created)
                 spokenResponseIsInBand = role == "direct"
             }
         case .responseDone(let id, let usage, let status):
@@ -262,7 +266,10 @@ public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant
                 // `tool.*` child spans, but its token usage is dropped this pass — so this count is the
                 // presenter's, not the turn total.
                 if let turn = turnSpan {
-                    let presenter = turn.generation("presenter", model: model, input: transcript(user))
+                    // Backdate the generation to the presenter/direct response's `created` receive-time
+                    // so it carries the real LLM latency, not a ~0-duration span (the API sends no timing).
+                    let presenter = turn.generation("presenter", model: model, input: transcript(user),
+                                                     startedAt: presenterStartedAt ?? Date())
                     presenter.usage(promptTokens: usage?.inputTokens, completionTokens: usage?.outputTokens)
                     if let breakdown = usage?.breakdownMetadata { presenter.setMetadata(breakdown) }
                     presenter.end(output: transcript(reply), error: nil)
@@ -275,6 +282,11 @@ public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant
                 emit(.state(.listening))
                 pendingUserText = ""
                 replyText = ""
+                // Clear synchronously BEFORE the await: `persist` suspends the actor, and a reentrant
+                // next turn can set `presenterStartedAt` from its own response.created during that
+                // suspension — a `defer` after the await would wipe the new turn's timestamp and its
+                // presenter generation would fall back to Date() (~0 latency again).
+                presenterStartedAt = nil
                 await persist(user: user, reply: reply)
             }
             // else: a response we cancelled on barge-in (`presenterId` already cleared). The server still
@@ -334,6 +346,7 @@ public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant
         presenterResponses.remove(id)
         if id == presenterId { presenterId = nil }
         presenterActive = false
+        presenterStartedAt = nil
         callsPerResponse[id] = nil
         truncation.reset()
         endTurn(error: RealtimeSessionError.responseFailed(detail: detail))
