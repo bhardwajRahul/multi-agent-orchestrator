@@ -229,11 +229,21 @@ public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant
             await responseDone(id, usage: usage, status: status)
         case .error(let code, let message):
             if code == "response_cancel_not_active" { return }   // benign barge-in race
+            // The turn is broken (consumers close it on their side too) — record why on its span
+            // instead of leaving it to be force-closed later as a success.
+            endTurn(error: RealtimeSessionError.serverError(code: code, message: message ?? "realtime error"))
             emit(.error(code: code, message: message ?? code ?? "realtime error"))
         }
     }
 
     private func responseDone(_ id: String, usage: RealtimeUsage?, status: RealtimeResponseStatus?) async {
+        // A presenter/direct we cancelled on barge-in (`presenterId` already re-pointed or cleared):
+        // consume its late `done` first, whatever the status — a `response.cancel` racing a
+        // server-side failure lands as `failed`, and failing the turn for it would kill the NEW turn.
+        if presenterResponses.contains(id), id != presenterId {
+            presenterResponses.remove(id)
+            return
+        }
         if let status, status.isFailure {
             // The response died server-side (gatherer, presenter, or direct alike) — presenting or
             // continuing from it would hang the turn. Close it and hand the app the failure in-band.
@@ -326,7 +336,7 @@ public actor OpenAIGroundedVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant
         presenterActive = false
         callsPerResponse[id] = nil
         truncation.reset()
-        endTurn(error: nil)
+        endTurn(error: RealtimeSessionError.responseFailed(detail: detail))
         emit(.error(code: "response_failed", message: detail ?? "response failed"))
         emit(.state(.listening))   // same resting state a clean finish announces
         resetTurn()

@@ -230,14 +230,22 @@ public actor OpenAIVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant {
             await responseDone(id, usage: usage, status: status)
         case .error(let code, let message):
             if code == "response_cancel_not_active" { return }   // benign barge-in race
+            // The turn is broken (consumers close it on their side too) — record why on its span
+            // instead of leaving it to be force-closed later as a success.
+            endTurn(error: RealtimeSessionError.serverError(code: code, message: message ?? "realtime error"))
             emit(.error(code: code, message: message ?? code ?? "realtime error"))
         }
     }
 
     private func responseDone(_ id: String, usage: RealtimeUsage?, status: RealtimeResponseStatus?) async {
-        guard liveResponses.contains(id) else { return }   // unknown / stale (cancelled) response
+        guard liveResponses.contains(id) else { return }   // unknown response
         liveResponses.remove(id)
         if let status, status.isFailure {
+            // Fail the turn only for the response we're actually running — the one speaking, or one
+            // whose tool outputs we'd continue from. A response cancelled on barge-in stays in
+            // `liveResponses` to consume its late `done` here, and a `response.cancel` racing a
+            // server-side failure lands that `done` as `failed` — stale, not the current turn's.
+            guard id == currentResponseId || (callsPerResponse[id] ?? 0) > 0 else { return }
             // The response died server-side (no `error` event accompanies this) — continuing the
             // tool loop would hang the turn. Close it and hand the app the failure in-band.
             failTurn(responseId: id, detail: status.detail)
@@ -286,7 +294,7 @@ public actor OpenAIVoiceAssistant: OpenAIRealtimeSession, VoiceAssistant {
         if id == currentResponseId { currentResponseId = nil }
         isSpeaking = false
         truncation.reset()
-        endTurn(error: nil)
+        endTurn(error: RealtimeSessionError.responseFailed(detail: detail))
         emit(.error(code: "response_failed", message: detail ?? "response failed"))
         emit(.state(.listening))   // same resting state a clean finish announces
         resetTurn()
