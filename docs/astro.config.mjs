@@ -221,6 +221,7 @@ export default defineConfig({
 										items: [
 											{ label: 'Local & HTTP tools', slug: 'swift/tools/built-in/local-http' },
 											{ label: 'Composing providers', slug: 'swift/tools/built-in/composing' },
+											{ label: 'Dakera retriever', slug: 'swift/tools/built-in/dakera-retriever' },
 											{ label: 'MCP servers', slug: 'swift/mcp/overview' },
 											{ label: 'MCP client (SDKMCPClient)', slug: 'swift/mcp/built-in/sdk-client' },
 										],
