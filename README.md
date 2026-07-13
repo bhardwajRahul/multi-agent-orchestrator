@@ -200,7 +200,7 @@ Watch the demo app route a conversation across six specialized agents (travel, w
 - [Voicing your agents with Amazon Connect, Lex, and Bedrock](https://community.aws/content/2mt7CFG7xg4yw6GRHwH9akhg0oD/speak-up-ai-voicing-your-agents-with-amazon-connect-lex-and-bedrock) — an AI customer call center.
 - [Unlock Bedrock InvokeInlineAgent API's hidden potential](https://community.aws/content/2pTsHrYPqvAbJBl9ht1XxPOSPjR/unlock-bedrock-invokeinlineagent-api-s-hidden-potential-with-agent-squad) — dynamic agent creation at enterprise scale.
 - [Supercharging Amazon Bedrock Flows](https://community.aws/content/2phMjQ0bqWMg4PBwejBs1uf4YQE/supercharging-amazon-bedrock-flows-with-aws-agent-squad) — conversation memory and multi-flow orchestration.
-- **Podcasts**: [An Orchestrator for Your AI Agents (EN)](https://podcasts.apple.com/us/podcast/an-orchestrator-for-your-ai-agents/id1574162669?i=1000677039579) ([Spotify](https://open.spotify.com/episode/2a9DBGZn2lVqVMBLWGipHU)) · [L'orchestrateur multi-agents (FR)](https://podcasts.apple.com/be/podcast/lorchestrateur-multi-agents/id1452118442?i=1000684332612) ([Spotify](https://open.spotify.com/episode/4RdMazSRhZUyW2pniG91Vf))
+- **Podcasts**: [An Orchestrator for Your AI Agents (EN)](https://podcasts.apple.com/us/podcast/an-orchestrator-for-your-ai-agents/id1574162669?i=1000677039579) ([Spotify](https://open.spotify.com/episode/2a9DBGZn2lVqVMBLWGipHU)) · [L'orchestrateur multi-agents (FR)](https://podcasts.apple.com/be/podcast/lorchestrateur-multi-agents/id1452118442?i=1000684332612)
 
 ## Community & contributing
 
