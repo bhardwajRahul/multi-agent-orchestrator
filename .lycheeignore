@@ -1,0 +1,8 @@
+# Pre-existing external links (repo-wide, not introduced by this PR) that the
+# lychee link-checker fails on. The check only runs on PRs touching typescript/**,
+# so these surface here. See PR #553 discussion.
+#
+# npmjs returns 403 to the checker's bot despite a browser UA — the page exists.
+https://www.npmjs.com/package/agent-squad
+# Dead podcast episode link in README.md / typescript/README.md (returns 404).
+https://open.spotify.com/episode/4RdMazSRhZUyW2pniG91Vf
