@@ -31,7 +31,7 @@ Every component is a `Sendable` protocol with one built-in implementation — sw
 
 | Import | Pulls in | Contents |
 |---|---|---|
-| `AgentSquad` | nothing external | protocols, `Agent`, `GroundedAgent`, `Orchestrator`, `LLMClassifier`, `ChatCompletionsClient`, `FileChatStorage`, `DeviceChatStorage`, `InMemoryChatStorage`, `TransformingChatStorage`, `OSLogTracer`, OTLP export |
+| `AgentSquad` | nothing external | protocols, `Agent`, `GroundedAgent`, `Orchestrator`, `LLMClassifier`, `ChatCompletionsClient`, `DakeraRetriever`, `FileChatStorage`, `DeviceChatStorage`, `InMemoryChatStorage`, `TransformingChatStorage`, `OSLogTracer`, OTLP export |
 | `AgentSquadMCP` | MCP Swift SDK | `MCPServer` (= `MCPToolProvider`), `SDKMCPClient` |
 | `AgentSquadAudio` | AVFoundation | `VoiceProcessedAudioIO` (capture+playback, one engine, AEC — the recommended wiring), `MicCapture` (voice-processed/AEC by default), `AudioPlayback`, `VoiceProcessing`, `AudioSessionPolicy` (needs `NSMicrophoneUsageDescription`) |
 
@@ -69,7 +69,10 @@ stream. `.final` is what the orchestrator persists. Inputs/messages are value ty
   (Swift closure) and `Tool.http`/`Tool.get`/`.post` (declarative HTTP, with a `ToolParameter` DSL so
   you don't hand-write JSON Schema); **`HTTPToolGroup(baseURL:…)`** declares one API's shared
   config once, then one line per endpoint; **`MCPServer(url:)`** connects an MCP server; and
-  **`AggregateToolProvider`** composes any mix behind one seam. A `ToolResult` is three-part: text →
+  **`AggregateToolProvider`** composes any mix behind one seam; **`DakeraRetriever(namespace:…)`** is a
+  `ToolProvider` backed by a self-hosted [Dakera](https://dakera.ai) memory server — it exposes a
+  `search_memory` tool for grounding (and a direct `retrieve(_:)` API), talking to Dakera's REST
+  endpoint over `URLSession` with no extra dependency. A `ToolResult` is three-part: text →
   the model's context, `structuredContent` → curator/UI data, `ui` → an optional widget.
 - **`FileChatStorage`** (JSON files, iOS 16+) and **`DeviceChatStorage`** (SwiftData, iOS 17+) persist history on-device; **`InMemoryChatStorage`** is a non-persistent, seedable single-conversation store. **`TransformingChatStorage`** wraps any store and runs a `MessageTransform` before each save (PII scrub / redact / drop) — reads pass through, `message.mappingText { … }` covers the text-only case. **`OSLogTracer`** is the default
   tracer; wire `ProcessingTracer` + `OTLPExporter` to ship traces to Langfuse/LangSmith/Datadog/…
