@@ -99,9 +99,7 @@ class MCPToolProvider(AgentTools):
         servers: list[MCPServerConfig],
         callbacks: Optional[AgentToolCallbacks] = None,
     ) -> None:
-        # Intentionally bypass AgentTools.__init__ — we have no static AgentTool list
-        self.tools: list[Any] = []  # unused; tools come from MCP at runtime
-        self.callbacks = callbacks or AgentToolCallbacks()
+        super().__init__(tools=[], callbacks=callbacks)
 
         self._servers = servers
         # Maps tool_name → (ClientSession, mcp_tool)
