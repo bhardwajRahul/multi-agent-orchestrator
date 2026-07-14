@@ -31,6 +31,7 @@ export { ClassifierCallbacks } from './classifiers/classifier';
 
 export { Retriever } from './retrievers/retriever';
 export { AmazonKnowledgeBasesRetriever, AmazonKnowledgeBasesRetrieverOptions } from './retrievers/AmazonKBRetriever';
+export { DakeraRetriever, DakeraRetrieverOptions } from './retrievers/DakeraRetriever';
 
 export { ChatStorage } from './storage/chatStorage';
 export { InMemoryChatStorage } from './storage/memoryChatStorage';

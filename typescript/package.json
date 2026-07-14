@@ -47,14 +47,19 @@
     "stopword": "^3.0.1"
   },
   "peerDependencies": {
+    "@dakera-ai/dakera": "^0.11.100",
     "@modelcontextprotocol/sdk": ">=1.0.0"
   },
   "peerDependenciesMeta": {
+    "@dakera-ai/dakera": {
+      "optional": true
+    },
     "@modelcontextprotocol/sdk": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@dakera-ai/dakera": "^0.11.100",
     "@eslint/js": "^9.39.2",
     "@types/jest": "^29.5.12",
     "@types/mocha": "^10.0.7",
