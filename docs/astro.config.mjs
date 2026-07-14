@@ -102,6 +102,7 @@ export default defineConfig({
 										{ label: 'In-Memory', link: '/storage/in-memory' },
 										{ label: 'DynamoDB', link: '/storage/dynamodb' },
 										{ label: 'SQL Storage', link: '/storage/sql' },
+										{ label: 'Summarizing Storage', link: '/storage/summarizing' },
 									]
 								},
 								{ label: 'Custom Storage', link: '/storage/custom' }
