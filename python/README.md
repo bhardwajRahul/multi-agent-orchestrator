@@ -260,6 +260,16 @@ pip install ./dist/agent_squad-1.2.3-py3-none-any.whl
 
 
 
+## Building with an AI assistant
+
+This package ships a **skill** — a single, assistant-agnostic guide at [`SKILL.md`](SKILL.md) with the mental model, real API signatures, task recipes, and gotchas for both the built-in types and writing your own.
+
+It isn't auto-installed — point your assistant at it. For example:
+
+> *Read `python/SKILL.md` before writing any agent-squad Python code.*
+
+Works with any assistant (Claude, Cursor, Copilot, …).
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/CONTRIBUTING.md) for more details.

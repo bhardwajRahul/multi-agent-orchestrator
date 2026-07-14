@@ -202,6 +202,22 @@ Watch the demo app route a conversation across six specialized agents (travel, w
 - [Supercharging Amazon Bedrock Flows](https://community.aws/content/2phMjQ0bqWMg4PBwejBs1uf4YQE/supercharging-amazon-bedrock-flows-with-aws-agent-squad) — conversation memory and multi-flow orchestration.
 - **Podcasts**: [An Orchestrator for Your AI Agents (EN)](https://podcasts.apple.com/us/podcast/an-orchestrator-for-your-ai-agents/id1574162669?i=1000677039579) ([Spotify](https://open.spotify.com/episode/2a9DBGZn2lVqVMBLWGipHU)) · [L'orchestrateur multi-agents (FR)](https://podcasts.apple.com/be/podcast/lorchestrateur-multi-agents/id1452118442?i=1000684332612)
 
+## Building with an AI assistant
+
+Each runtime ships a **skill** — a single, assistant-agnostic guide that gives an AI assistant the mental model, real API signatures, task recipes, and gotchas it needs to write correct code with the framework:
+
+| Runtime | Skill file |
+|---|---|
+| Python | [`python/SKILL.md`](python/SKILL.md) |
+| TypeScript | [`typescript/SKILL.md`](typescript/SKILL.md) |
+| Swift | [`swift/SKILL.md`](swift/SKILL.md) |
+
+These files are not auto-installed — point your assistant at the relevant one. For example:
+
+> *Read `python/SKILL.md` before writing any agent-squad Python code.*
+
+Works with any assistant (Claude, Cursor, Copilot, …).
+
 ## Community & contributing
 
 Questions, ideas, or something to show off? Join the [discussions](https://github.com/2fastlabs/agent-squad/discussions): [Show & Tell](https://github.com/2fastlabs/agent-squad/discussions/categories/show-and-tell) · [General](https://github.com/2fastlabs/agent-squad/discussions/categories/general) · [Ideas](https://github.com/2fastlabs/agent-squad/discussions/categories/ideas).

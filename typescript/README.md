@@ -177,6 +177,16 @@ This example showcases:
 4. Handling of both streaming and non-streaming responses from different types of agents.
 
 
+## Building with an AI assistant
+
+This package ships a **skill** — a single, assistant-agnostic guide at [`SKILL.md`](SKILL.md) with the mental model, real API signatures, task recipes, and gotchas for both the built-in types and writing your own.
+
+It isn't auto-installed — point your assistant at it. For example:
+
+> *Read `typescript/SKILL.md` before writing any agent-squad TypeScript code.*
+
+Works with any assistant (Claude, Cursor, Copilot, …).
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](https://raw.githubusercontent.com/2fastlabs/agent-squad/main/CONTRIBUTING.md) for more details.
