@@ -98,3 +98,4 @@ class DakeraRetriever(Retriever):
     def combine_retrieval_results(results: List[Any]) -> str:
         """Join the ``text`` field of each result into a single newline-separated string."""
         return "\n".join(result.text for result in results if result is not None and getattr(result, "text", None))
+
