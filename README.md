@@ -9,6 +9,14 @@
 </p>
 
 <h3 align="center">
+  <img src="https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/new.png" alt="New" height="20"> JevClassifier — typed decision routing in TypeScript &amp; Python
+</h3>
+<p align="center">
+  Route with a decision model instead of an LLM: calibrated confidence, sub-second decisions, one-line drop-in — in both runtimes.<br>
+  <a href="#new-jevclassifier--typed-decision-routing-in-typescript--python"><strong>See what's included ↓</strong></a> · <a href="https://2fastlabs.github.io/agent-squad/classifiers/built-in/jev-classifier"><strong>Jev docs →</strong></a>
+</p>
+
+<h3 align="center">
   <img src="https://raw.githubusercontent.com/2fastlabs/agent-squad/main/img/new.png" alt="New" height="20"> Now available in Swift
 </h3>
 <p align="center">
@@ -141,6 +149,18 @@ for try await event in orchestrator.route(.text("wireless headphones under €10
 
 Full walkthrough in the [Swift README](swift/README.md#quick-start).
 
+## New: JevClassifier — typed decision routing, in TypeScript & Python
+
+Route with a decision model instead of an LLM. `JevClassifier` sends your agents to [Jev](https://docs.typesafe.ai/introduction), TypeSafe AI's System One model, as a typed `choice` question and gets back the winning agent plus a **calibrated confidence** — no free-text parsing, no tool-call plumbing, no malformed agent names.
+
+- 🟦🐍 **Both runtimes, zero extra dependencies** — same behavior and defaults in TypeScript (built-in `fetch`) and Python (standard library only), each with a full mocked test suite.
+- ⚡ **Fast and cheap** — sub-second decisions billed on input tokens only (output tokens free, see [pricing](https://docs.typesafe.ai/models)), versus a full LLM call per routing decision.
+- 🧠 **Context-aware follow-ups** — "yes, go ahead" routes back to the agent whose pending question it answers, even after the conversation switched topics in between.
+- 🎯 **Built-in `unknown` option** — out-of-scope requests return no agent instead of a forced match, and the calibrated confidence is meaningful to threshold.
+- 🔌 **One-line drop-in** — `new AgentSquad({ classifier: new JevClassifier() })` / `AgentSquad(classifier=JevClassifier())` with `TYPESAFE_API_KEY` set.
+
+[Learn more about JevClassifier →](https://2fastlabs.github.io/agent-squad/classifiers/built-in/jev-classifier) — or run the [side-by-side latency & cost comparison vs an LLM classifier](examples/jev-demo/typescript).
+
 ## SupervisorAgent — team coordination
 
 A lead agent coordinates a team of specialized agents in parallel using an *agent-as-tools* architecture, maintaining shared context and delivering one coherent response.
@@ -192,6 +212,7 @@ Watch the demo app route a conversation across six specialized agents (travel, w
 - [`fast-api-streaming`](https://github.com/2fastlabs/agent-squad/tree/main/examples/fast-api-streaming) — FastAPI with streaming.
 - [`text-2-structured-output`](https://github.com/2fastlabs/agent-squad/tree/main/examples/text-2-structured-output) — natural language to structured data.
 - [`bedrock-inline-agents`](https://github.com/2fastlabs/agent-squad/tree/main/examples/bedrock-inline-agents) · [`bedrock-prompt-routing`](https://github.com/2fastlabs/agent-squad/tree/main/examples/bedrock-prompt-routing) — Bedrock samples.
+- [`jev-demo`](https://github.com/2fastlabs/agent-squad/tree/main/examples/jev-demo) — JevClassifier multi-turn routing demo, plus a side-by-side Jev vs Bedrock classifier comparison with latency and cost.
 
 ## Articles & podcasts
 

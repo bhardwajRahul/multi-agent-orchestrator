@@ -1,0 +1,17 @@
+{
+  "name": "jev-demo",
+  "version": "1.0.0",
+  "description": "JevClassifier demos: domain routing and Jev vs Bedrock comparison",
+  "private": true,
+  "scripts": {
+    "demo": "ts-node jevClassifierDemo.ts",
+    "demo:interactive": "ts-node jevClassifierDemo.ts --interactive",
+    "compare": "ts-node jevVsBedrockClassifierDemo.ts"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}

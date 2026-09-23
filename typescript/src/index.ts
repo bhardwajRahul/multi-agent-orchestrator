@@ -27,6 +27,7 @@ export { AgentCallbacks } from './agents/agent';
 export { BedrockClassifier, BedrockClassifierOptions } from './classifiers/bedrockClassifier';
 export { AnthropicClassifier, AnthropicClassifierOptions } from './classifiers/anthropicClassifier';
 export { OpenAIClassifier, OpenAIClassifierOptions } from "./classifiers/openAIClassifier"
+export { JevClassifier, JevClassifierOptions, JevUsage } from './classifiers/jevClassifier';
 export { ClassifierCallbacks } from './classifiers/classifier';
 
 export { Retriever } from './retrievers/retriever';

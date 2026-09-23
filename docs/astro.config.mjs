@@ -53,6 +53,7 @@ export default defineConfig({
 									  { label: 'Bedrock Classifier', link: '/classifiers/built-in/bedrock-classifier'},
 									  { label: 'Anthropic Classifier', link: '/classifiers/built-in/anthropic-classifier' },
 									  { label: 'OpenAI Classifier', link: '/classifiers/built-in/openai-classifier' },
+									  { label: 'Jev Classifier', link: '/classifiers/built-in/jev-classifier' },
 									]
 								  },
 								  { label: 'Custom Classifier', link: '/classifiers/custom-classifier' },
