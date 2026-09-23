@@ -126,13 +126,31 @@ function formatUsd(value: unknown): string {
   return `$${formatted}`;
 }
 
+/** Running token totals; only input tokens are billed. */
+interface TokenTotals {
+  input: number;
+  output: number;
+}
+
+function addTokens(totals: TokenTotals, usage: JevUsage | undefined): void {
+  totals.input += asNumber(usage?.input_tokens) ?? 0;
+  totals.output += asNumber(usage?.output_tokens) ?? 0;
+}
+
+function formatTokens(input: unknown, output: unknown): string {
+  const count = (value: unknown) => asNumber(value)?.toLocaleString("en-US") ?? "(not reported)";
+  return `${count(input)} input (billed), ${count(output)} output (free)`;
+}
+
 function printResult(
   selectedAgentName: string | undefined,
   confidence: number,
+  usage: JevUsage | undefined,
   cost: CostInfo | undefined
 ): void {
   console.log(`  agent:      ${selectedAgentName ?? "(none - unknown)"}`);
   console.log(`  confidence: ${confidence.toFixed(3)}`);
+  console.log(`  tokens:     ${formatTokens(usage?.input_tokens, usage?.output_tokens)}`);
   const suffix = cost?.estimated ? " (estimated from input tokens)" : "";
   console.log(`  cost:       ${formatUsd(cost?.usd)}${suffix}`);
 }
@@ -155,6 +173,7 @@ async function runScripted(): Promise<void> {
   let totalCostUsd = 0;
   let anyEstimated = false;
   let firstUsage = true;
+  const totalTokens: TokenTotals = { input: 0, output: 0 };
 
   for (const query of queries) {
     const result = await classifier.classify(query, []);
@@ -162,6 +181,7 @@ async function runScripted(): Promise<void> {
     const cost = extractCost(usage);
     totalCostUsd += cost?.usd ?? 0;
     anyEstimated ||= cost?.estimated ?? false;
+    addTokens(totalTokens, usage);
 
     // Print the raw response body once, so any drift between the documented
     // and the actual response shape is immediately visible.
@@ -173,7 +193,7 @@ async function runScripted(): Promise<void> {
     }
 
     console.log(`> ${query}`);
-    printResult(result.selectedAgent?.name, result.confidence, cost);
+    printResult(result.selectedAgent?.name, result.confidence, usage, cost);
     console.log();
   }
 
@@ -201,11 +221,13 @@ async function runScripted(): Promise<void> {
   const followUpCost = extractCost(usage);
   totalCostUsd += followUpCost?.usd ?? 0;
   anyEstimated ||= followUpCost?.estimated ?? false;
+  addTokens(totalTokens, usage);
 
   console.log('> "yes, please" (follow-up, with history)');
-  printResult(followUp.selectedAgent?.name, followUp.confidence, followUpCost);
+  printResult(followUp.selectedAgent?.name, followUp.confidence, usage, followUpCost);
   console.log();
 
+  console.log(`Total tokens: ${formatTokens(totalTokens.input, totalTokens.output)}`);
   console.log(
     `Total cost: ${formatUsd(totalCostUsd)}${anyEstimated ? " (estimated from input tokens)" : ""}`
   );
@@ -221,6 +243,7 @@ async function runInteractive(): Promise<void> {
   let totalCostUsd = 0;
   let anyEstimated = false;
   let firstUsage = true;
+  const totalTokens: TokenTotals = { input: 0, output: 0 };
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -232,7 +255,10 @@ async function runInteractive(): Promise<void> {
   rl.on("close", () => {
     closed = true;
     console.log(
-      `\nTotal cost this session: ${formatUsd(totalCostUsd)}${
+      `\nTotal tokens this session: ${formatTokens(totalTokens.input, totalTokens.output)}`
+    );
+    console.log(
+      `Total cost this session: ${formatUsd(totalCostUsd)}${
         anyEstimated ? " (estimated from input tokens)" : ""
       }`
     );
@@ -265,6 +291,7 @@ async function runInteractive(): Promise<void> {
         const cost = extractCost(usage);
         totalCostUsd += cost?.usd ?? 0;
         anyEstimated ||= cost?.estimated ?? false;
+        addTokens(totalTokens, usage);
 
         // Print the raw response body once, so any drift between the documented
         // and the actual response shape is immediately visible.
@@ -275,7 +302,7 @@ async function runInteractive(): Promise<void> {
           firstUsage = false;
         }
 
-        printResult(result.selectedAgent?.name, result.confidence, cost);
+        printResult(result.selectedAgent?.name, result.confidence, usage, cost);
 
         if (result.selectedAgent) {
           // Let the Bedrock agent answer, and record both turns so the next

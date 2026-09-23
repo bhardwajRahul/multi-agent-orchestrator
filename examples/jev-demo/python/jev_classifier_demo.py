@@ -111,9 +111,34 @@ def format_usd(value: Optional[float]) -> str:
     return "$" + f"{value:.8f}".rstrip("0").rstrip(".")
 
 
-def print_result(agent_name: Optional[str], confidence: float, cost: Optional[float]) -> None:
+class TokenTotals:
+    """Running token totals; only input tokens are billed."""
+
+    def __init__(self) -> None:
+        self.input = 0
+        self.output = 0
+
+    def add(self, usage: Optional[dict[str, Any]]) -> None:
+        self.input += token_count(usage, "input_tokens") or 0
+        self.output += token_count(usage, "output_tokens") or 0
+
+
+def token_count(usage: Optional[dict[str, Any]], key: str) -> Optional[int]:
+    value = (usage or {}).get(key)
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def format_tokens(input_tokens: Optional[int], output_tokens: Optional[int]) -> str:
+    def count(value: Optional[int]) -> str:
+        return "(not reported)" if value is None else f"{value:,}"
+    return f"{count(input_tokens)} input (billed), {count(output_tokens)} output (free)"
+
+
+def print_result(agent_name: Optional[str], confidence: float,
+                 usage: Optional[dict[str, Any]], cost: Optional[float]) -> None:
     print(f"  agent:      {agent_name or '(none - unknown)'}")
     print(f"  confidence: {confidence:.3f}")
+    print(f"  tokens:     {format_tokens(token_count(usage, 'input_tokens'), token_count(usage, 'output_tokens'))}")
     suffix = " (estimated from input tokens)" if cost is not None else ""
     print(f"  cost:       {format_usd(cost)}{suffix}")
 
@@ -139,12 +164,15 @@ async def run_scripted() -> None:
     print_agents()
 
     total_cost = 0.0
+    total_tokens = TokenTotals()
     first_response = True
 
     for query in queries:
         result = await classifier.classify(query, [])
-        cost = estimate_cost(classifier.get_last_usage())
+        usage = classifier.get_last_usage()
+        cost = estimate_cost(usage)
         total_cost += cost or 0.0
+        total_tokens.add(usage)
 
         # Print the raw response body once, so the actual response shape
         # (including the versioned model that answered) is visible.
@@ -153,7 +181,7 @@ async def run_scripted() -> None:
             first_response = False
 
         print(f"> {query}")
-        print_result(result.selected_agent and result.selected_agent.name, result.confidence, cost)
+        print_result(result.selected_agent and result.selected_agent.name, result.confidence, usage, cost)
         print()
 
     # A follow-up turn: on its own "yes, please" is meaningless, so the classifier
@@ -168,14 +196,17 @@ async def run_scripted() -> None:
     ]
 
     follow_up = await classifier.classify("yes, please", history)
-    follow_up_cost = estimate_cost(classifier.get_last_usage())
+    usage = classifier.get_last_usage()
+    follow_up_cost = estimate_cost(usage)
     total_cost += follow_up_cost or 0.0
+    total_tokens.add(usage)
 
     print('> "yes, please" (follow-up, with history)')
     print_result(follow_up.selected_agent and follow_up.selected_agent.name,
-                 follow_up.confidence, follow_up_cost)
+                 follow_up.confidence, usage, follow_up_cost)
     print()
 
+    print(f"Total tokens: {format_tokens(total_tokens.input, total_tokens.output)}")
     print(f"Total cost: {format_usd(total_cost)} (estimated from input tokens)")
 
 
@@ -187,6 +218,7 @@ async def run_interactive() -> None:
     # more" keep routing to the agent that answered the previous turn.
     history: list[ConversationMessage] = []
     total_cost = 0.0
+    total_tokens = TokenTotals()
     first_response = True
 
     print("Type a query and press Enter to see where it routes. Type 'exit' to quit.\n")
@@ -205,15 +237,17 @@ async def run_interactive() -> None:
 
             try:
                 result = await classifier.classify(user_input, history)
-                cost = estimate_cost(classifier.get_last_usage())
+                usage = classifier.get_last_usage()
+                cost = estimate_cost(usage)
                 total_cost += cost or 0.0
+                total_tokens.add(usage)
 
                 if first_response:
                     print(f"(raw response from the API: {json.dumps(classifier.get_last_response())})")
                     first_response = False
 
                 agent = result.selected_agent
-                print_result(agent and agent.name, result.confidence, cost)
+                print_result(agent and agent.name, result.confidence, usage, cost)
 
                 if agent:
                     # Let the Bedrock agent answer, and record both turns so the next
@@ -247,7 +281,8 @@ async def run_interactive() -> None:
     except KeyboardInterrupt:
         pass
 
-    print(f"\nTotal cost this session: {format_usd(total_cost)} (estimated from input tokens)")
+    print(f"\nTotal tokens this session: {format_tokens(total_tokens.input, total_tokens.output)}")
+    print(f"Total cost this session: {format_usd(total_cost)} (estimated from input tokens)")
 
 
 if __name__ == "__main__":
