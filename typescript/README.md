@@ -38,6 +38,18 @@
 - 📦 **Pre-built agents and classifiers** — A variety of ready-to-use agents and multiple classifier implementations available.
 - 🔤 **TypeScript support** — Native TypeScript implementation available.
 
+## ✨ New: JevClassifier
+
+Route requests with [Jev](https://docs.typesafe.ai/introduction), TypeSafe AI's decision model, instead of an LLM. Your agents become a typed `choice` question, and Jev returns the chosen agent plus a calibrated confidence. There's no output parsing, decisions are fast, and you're billed on input tokens only. It adds no new dependencies.
+
+```typescript
+import { AgentSquad, JevClassifier } from "agent-squad";
+
+const orchestrator = new AgentSquad({ classifier: new JevClassifier() }); // reads TYPESAFE_API_KEY
+```
+
+[JevClassifier docs](https://2fastlabs.github.io/agent-squad/classifiers/built-in/jev-classifier) · [demos](https://github.com/2fastlabs/agent-squad/tree/main/examples/jev-demo/typescript)
+
 ## What's the Agent Squad ❓
 
 The Agent Squad is a flexible framework for managing multiple AI agents and handling complex conversations. It intelligently routes queries and maintains context across interactions.

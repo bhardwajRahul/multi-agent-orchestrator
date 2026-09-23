@@ -40,6 +40,19 @@
 - 📦 **Pre-built agents and classifiers** — A variety of ready-to-use agents and multiple classifier implementations available.
 - 🔤 **TypeScript support** — Native TypeScript implementation available.
 
+## ✨ New: JevClassifier
+
+Route requests with [Jev](https://docs.typesafe.ai/introduction), TypeSafe AI's decision model, instead of an LLM. Your agents become a typed `choice` question, and Jev returns the chosen agent plus a calibrated confidence. There's no output parsing, decisions are fast, and you're billed on input tokens only. It adds no new dependencies.
+
+```python
+from agent_squad.classifiers import JevClassifier
+from agent_squad.orchestrator import AgentSquad
+
+orchestrator = AgentSquad(classifier=JevClassifier())  # reads TYPESAFE_API_KEY
+```
+
+[JevClassifier docs](https://2fastlabs.github.io/agent-squad/classifiers/built-in/jev-classifier) · [demos](https://github.com/2fastlabs/agent-squad/tree/main/examples/jev-demo/python)
+
 ## What's the Agent Squad ❓
 
 The Agent Squad is a flexible framework for managing multiple AI agents and handling complex conversations. It intelligently routes queries and maintains context across interactions.
@@ -199,6 +212,8 @@ If you want to use Anthropic or OpenAI for classifier and/or agents, make sure t
 pip install "agent-squad[anthropic]"
 pip install "agent-squad[openai]"
 ```
+
+The `JevClassifier` needs no extra: it's included in the core install.
 
 ### Full package installation
 For a complete installation (including Anthropic and OpenAi):
