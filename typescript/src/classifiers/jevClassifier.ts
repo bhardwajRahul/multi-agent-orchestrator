@@ -1,6 +1,6 @@
 import {
   ConversationMessage,
-  JEV_DECISION_API_URL,
+  JEV_API_URL,
   JEV_MODEL_ID_LATEST,
 } from "../types";
 import { Logger } from "../utils/logger";
@@ -22,6 +22,12 @@ const isRetryableStatus = (status: number) =>
   status === 408 || status === 429 || (status >= 500 && status < 600);
 const BACKOFF_INITIAL_MS = 500;
 const BACKOFF_MAX_MS = 5000;
+// A Retry-After longer than this fails fast instead of stalling the routing call.
+const MAX_RETRY_AFTER_MS = 10000;
+
+// The most recent messages kept as history. Jev's state (plus the longest
+// question) is limited to 32k tokens, and accuracy drops as it grows.
+const DEFAULT_MAX_HISTORY_MESSAGES = 20;
 
 const DEFAULT_INSTRUCTIONS = `Select the single agent best equipped to handle the current user input.
 
@@ -59,6 +65,10 @@ export interface JevClassifierOptions {
   // Optional: Retries on 408, 429 and 5xx responses, with exponential backoff.
   // Defaults to 2.
   maxRetries?: number;
+
+  // Optional: Only the most recent messages of the history are sent.
+  // Defaults to 20; null keeps the full history.
+  maxHistoryMessages?: number | null;
 
   callbacks?: ClassifierCallbacks;
 }
@@ -105,6 +115,7 @@ export class JevClassifier extends Classifier {
   private readonly instructions: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
+  private readonly maxHistoryMessages: number | null;
   protected callbacks: ClassifierCallbacks;
 
   // Token usage reported by Jev for the most recent decision, if any.
@@ -126,12 +137,26 @@ export class JevClassifier extends Classifier {
 
     this.apiKey = apiKey;
     this.modelId = options.modelId || JEV_MODEL_ID_LATEST;
-    this.baseUrl = options.baseUrl || JEV_DECISION_API_URL;
+    this.baseUrl = options.baseUrl || JEV_API_URL;
     this.instructions = options.instructions || DEFAULT_INSTRUCTIONS;
     this.timeoutMs = options.timeoutMs ?? 30000;
     this.maxRetries = Math.max(0, options.maxRetries ?? 2);
+    this.maxHistoryMessages =
+      options.maxHistoryMessages === null
+        ? null
+        : Math.max(0, options.maxHistoryMessages ?? DEFAULT_MAX_HISTORY_MESSAGES);
     this.callbacks = options.callbacks ?? new ClassifierCallbacks();
     this.promptTemplate = DEFAULT_PROMPT_TEMPLATE;
+  }
+
+  async classify(inputText: string, chatHistory: ConversationMessage[]): Promise<ClassifierResult> {
+    const history =
+      this.maxHistoryMessages === null
+        ? chatHistory
+        : this.maxHistoryMessages === 0
+          ? []
+          : chatHistory.slice(-this.maxHistoryMessages);
+    return super.classify(inputText, history);
   }
 
   /**
@@ -251,14 +276,14 @@ export class JevClassifier extends Classifier {
 
   /**
    * Posts the request, retrying 408, 429 and 5xx responses with exponential
-   * backoff (or the delay the Retry-After header asks for). The timeout
+   * backoff (or the delay the Retry-After header asks for, up to 10 s). The timeout
    * applies to each attempt, including reading the response body.
    */
   private async send(requestBody: unknown): Promise<any> {
     for (let attempt = 0; ; attempt++) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
-      let retryDelayMs: number;
+      let retryDelayMs: number | null;
 
       try {
         const response = await fetch(this.baseUrl, {
@@ -276,11 +301,10 @@ export class JevClassifier extends Classifier {
           return await response.json();
         }
 
-        if (!isRetryableStatus(response.status) || attempt >= this.maxRetries) {
+        retryDelayMs = this.retryDelayMs(response, attempt);
+        if (!isRetryableStatus(response.status) || attempt >= this.maxRetries || retryDelayMs === null) {
           throw new Error(await this.describeHttpError(response));
         }
-
-        retryDelayMs = this.retryDelayMs(response, attempt);
       } finally {
         clearTimeout(timeout);
       }
@@ -289,11 +313,12 @@ export class JevClassifier extends Classifier {
     }
   }
 
-  private retryDelayMs(response: Response, attempt: number): number {
+  /** Milliseconds to wait before retrying, or null when Retry-After asks for too long. */
+  private retryDelayMs(response: Response, attempt: number): number | null {
     const retryAfter = response.headers?.get("retry-after");
     const seconds = retryAfter ? Number(retryAfter) : NaN;
     if (Number.isFinite(seconds) && seconds >= 0) {
-      return seconds * 1000;
+      return seconds * 1000 <= MAX_RETRY_AFTER_MS ? seconds * 1000 : null;
     }
     return Math.min(BACKOFF_INITIAL_MS * 2 ** attempt, BACKOFF_MAX_MS);
   }

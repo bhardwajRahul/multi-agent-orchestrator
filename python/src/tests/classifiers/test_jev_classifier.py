@@ -9,7 +9,7 @@ import pytest
 from agent_squad.classifiers import ClassifierResult
 from agent_squad.classifiers.jev_classifier import (
     DEFAULT_INSTRUCTIONS,
-    JEV_DECISION_API_URL,
+    JEV_API_URL,
     JEV_MODEL_ID_LATEST,
     JevClassifier,
     JevClassifierOptions,
@@ -59,7 +59,7 @@ def http_error(code, reason, body="", retry_after=None):
     if retry_after is not None:
         headers["Retry-After"] = retry_after
     return urllib.error.HTTPError(
-        url=JEV_DECISION_API_URL,
+        url=JEV_API_URL,
         code=code,
         msg=reason,
         hdrs=headers,
@@ -109,14 +109,14 @@ class TestJevClassifier:
         self.classifier = JevClassifier(JevClassifierOptions(api_key='test-api-key'))
 
     def test_default_configuration(self):
-        assert self.classifier.base_url == JEV_DECISION_API_URL
+        assert self.classifier.base_url == JEV_API_URL
         assert self.classifier.model_id == JEV_MODEL_ID_LATEST
         assert self.classifier.instructions == DEFAULT_INSTRUCTIONS
         assert self.classifier.timeout == 30.0
         assert self.classifier.max_retries == 2
 
     def test_defaults_to_official_endpoint(self):
-        assert JEV_DECISION_API_URL == 'https://api.typesafe.ai/v1/systemone'
+        assert JEV_API_URL == 'https://api.typesafe.ai/v1/systemone'
 
     def test_custom_model_id(self):
         classifier = JevClassifier(JevClassifierOptions(
@@ -150,7 +150,7 @@ class TestJevClassifier:
         request = mock_urlopen.call_args[0][0]
         assert mock_urlopen.call_args[1]['timeout'] == 30.0
 
-        assert request.full_url == JEV_DECISION_API_URL
+        assert request.full_url == JEV_API_URL
         assert request.get_method() == 'POST'
         assert request.get_header('Authorization') == 'Bearer test-api-key'
         assert request.get_header('Content-type') == 'application/json'
@@ -180,6 +180,49 @@ class TestJevClassifier:
             '<conversation_history>\nuser: My printer is offline\n</conversation_history>\n\n'
             '<current_user_input>\nI was charged twice\n</current_user_input>'
         )
+
+    @staticmethod
+    def _long_history():
+        return [
+            ConversationMessage(
+                role=(ParticipantRole.USER if i % 2 == 0 else ParticipantRole.ASSISTANT).value,
+                content=[{"text": f"message-{i}"}],
+            )
+            for i in range(30)
+        ]
+
+    async def _sent_state(self, classifier):
+        classifier.set_agents(mock_agents())
+        with patch('urllib.request.urlopen', return_value=ok_response(CHOICE_PAYLOAD)) \
+                as mock_urlopen:
+            await classifier.classify('input', self._long_history())
+        return json.loads(mock_urlopen.call_args[0][0].data.decode('utf-8'))['state']
+
+    @pytest.mark.asyncio
+    async def test_keeps_last_20_history_messages_by_default(self):
+        state = await self._sent_state(self.classifier)
+        assert 'message-9\n' not in state
+        assert 'message-10\n' in state
+        assert 'message-29\n' in state
+
+    @pytest.mark.asyncio
+    async def test_custom_max_history_messages(self):
+        state = await self._sent_state(JevClassifier(JevClassifierOptions(
+            api_key='test', max_history_messages=2)))
+        assert 'message-27\n' not in state
+        assert 'message-28\n' in state
+
+    @pytest.mark.asyncio
+    async def test_none_max_history_messages_keeps_full_history(self):
+        state = await self._sent_state(JevClassifier(JevClassifierOptions(
+            api_key='test', max_history_messages=None)))
+        assert 'message-0\n' in state
+
+    @pytest.mark.asyncio
+    async def test_zero_max_history_messages_sends_no_history(self):
+        state = await self._sent_state(JevClassifier(JevClassifierOptions(
+            api_key='test', max_history_messages=0)))
+        assert 'message-' not in state
 
     @pytest.mark.asyncio
     async def test_custom_system_prompt_is_used_as_state(self):
@@ -294,6 +337,19 @@ class TestJevClassifier:
                 await self.classifier.process_request('input', [])
 
         assert mock_urlopen.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_fails_fast_when_retry_after_is_too_long(self):
+        self.classifier.set_agents(mock_agents())
+
+        with patch('urllib.request.urlopen',
+                   side_effect=http_error(429, 'Too Many Requests', 'slow down', retry_after='300')) \
+                as mock_urlopen:
+            with pytest.raises(ValueError,
+                               match="Jev request failed: 429 Too Many Requests - slow down"):
+                await self.classifier.process_request('input', [])
+
+        assert mock_urlopen.call_count == 1
 
     @pytest.mark.asyncio
     async def test_backs_off_exponentially_without_retry_after(self):

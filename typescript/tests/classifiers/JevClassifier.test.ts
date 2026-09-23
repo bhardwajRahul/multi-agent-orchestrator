@@ -1,7 +1,7 @@
 import { JevClassifier, JevClassifierOptions } from '../../src/classifiers/jevClassifier';
 import {
     ConversationMessage,
-    JEV_DECISION_API_URL,
+    JEV_API_URL,
     JEV_MODEL_ID_LATEST,
     ParticipantRole,
 } from '../../src/types';
@@ -61,14 +61,14 @@ describe('JevClassifier', () => {
     describe('constructor', () => {
         it('should create an instance with default options', () => {
             expect(classifier).toBeInstanceOf(JevClassifier);
-            expect(classifier['baseUrl']).toBe(JEV_DECISION_API_URL);
+            expect(classifier['baseUrl']).toBe(JEV_API_URL);
             expect(classifier['modelId']).toBe(JEV_MODEL_ID_LATEST);
             expect(classifier['timeoutMs']).toBe(30000);
             expect(classifier['maxRetries']).toBe(2);
         });
 
         it('should default to the official TypeSafe endpoint', () => {
-            expect(JEV_DECISION_API_URL).toBe('https://api.typesafe.ai/v1/systemone');
+            expect(JEV_API_URL).toBe('https://api.typesafe.ai/v1/systemone');
         });
 
         it('should use a custom model ID if provided', () => {
@@ -131,7 +131,7 @@ describe('JevClassifier', () => {
             expect(mockFetch).toHaveBeenCalledTimes(1);
             const [url, init] = mockFetch.mock.calls[0];
 
-            expect(url).toBe(JEV_DECISION_API_URL);
+            expect(url).toBe(JEV_API_URL);
             expect(init.method).toBe('POST');
             expect(init.headers).toEqual({
                 Authorization: 'Bearer test-api-key',
@@ -163,6 +163,43 @@ describe('JevClassifier', () => {
                 '<conversation_history>\nuser: My printer is offline\n</conversation_history>\n\n' +
                     `<current_user_input>\n${inputText}\n</current_user_input>`
             );
+        });
+
+        describe('history trimming', () => {
+            const longHistory: ConversationMessage[] = Array.from({ length: 30 }, (_, i) => ({
+                role: i % 2 === 0 ? ParticipantRole.USER : ParticipantRole.ASSISTANT,
+                content: [{ text: `message-${i}` }],
+            }));
+
+            const sentState = async (target: JevClassifier) => {
+                target.setAgents(mockAgents());
+                mockFetch.mockResolvedValue(okResponse(choicePayload));
+                await target.classify(inputText, longHistory);
+                return JSON.parse(mockFetch.mock.calls[0][1].body).state as string;
+            };
+
+            it('should keep only the last 20 messages by default', async () => {
+                const state = await sentState(classifier);
+                expect(state).not.toContain('message-9\n');
+                expect(state).toContain('message-10\n');
+                expect(state).toContain('message-29\n');
+            });
+
+            it('should honor a custom maxHistoryMessages', async () => {
+                const state = await sentState(new JevClassifier({ ...defaultOptions, maxHistoryMessages: 2 }));
+                expect(state).not.toContain('message-27\n');
+                expect(state).toContain('message-28\n');
+            });
+
+            it('should keep the full history when maxHistoryMessages is null', async () => {
+                const state = await sentState(new JevClassifier({ ...defaultOptions, maxHistoryMessages: null }));
+                expect(state).toContain('message-0\n');
+            });
+
+            it('should send no history when maxHistoryMessages is 0', async () => {
+                const state = await sentState(new JevClassifier({ ...defaultOptions, maxHistoryMessages: 0 }));
+                expect(state).not.toContain('message-');
+            });
         });
 
         it('should use a custom system prompt as state', async () => {
@@ -300,6 +337,15 @@ describe('JevClassifier', () => {
             await expect(classifier.processRequest(inputText, chatHistory))
                 .rejects.toThrow('Jev request failed: 429 Too Many Requests - slow down');
             expect(mockFetch).toHaveBeenCalledTimes(3);
+        });
+
+        it('should fail fast when Retry-After asks for more than 10 seconds', async () => {
+            classifier.setAgents(mockAgents());
+            mockFetch.mockResolvedValue(errorResponse(429, 'Too Many Requests', 'slow down', '300'));
+
+            await expect(classifier.processRequest(inputText, chatHistory))
+                .rejects.toThrow('Jev request failed: 429 Too Many Requests - slow down');
+            expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
         it('should back off exponentially when no Retry-After header is sent', async () => {

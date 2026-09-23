@@ -39,7 +39,7 @@ The Jev Classifier ships in **both runtimes** with identical behavior, identical
   </TabItem>
 </Tabs>
 
-Everything documented on this page (options, `unknown` handling, retries, usage exposure, error messages) applies to both implementations. Only the naming convention differs: `modelId`/`timeoutMs`/`maxRetries` in TypeScript, `model_id`/`timeout`/`max_retries` in Python.
+Everything documented on this page (options, `unknown` handling, retries, usage exposure, error messages) applies to both implementations. Only the naming convention differs: `modelId`/`timeoutMs`/`maxRetries`/`maxHistoryMessages` in TypeScript, `model_id`/`timeout`/`max_retries`/`max_history_messages` in Python.
 
 ## How it works
 
@@ -113,6 +113,9 @@ With no options, the classifier reads the key from the environment, uses the `je
 
       // Retries on 408, 429 and 5xx responses. Defaults to 2; 0 disables retries.
       maxRetries: 2,
+
+      // Only the most recent messages of the history are sent. Defaults to 20; null keeps all.
+      maxHistoryMessages: 20,
     });
     ```
   </TabItem>
@@ -139,6 +142,9 @@ With no options, the classifier reads the key from the environment, uses the `je
 
         # Retries on 408, 429 and 5xx responses. Defaults to 2; 0 disables retries.
         max_retries=2,
+
+        # Only the most recent messages of the history are sent. Defaults to 20; None keeps all.
+        max_history_messages=20,
     ))
     ```
   </TabItem>
@@ -151,10 +157,11 @@ The `JevClassifier` accepts the following options:
 - `baseUrl` (optional): System One endpoint. Defaults to `https://api.typesafe.ai/v1/systemone`. Any endpoint that implements the same request and response schema works.
 - `instructions` (optional): The instructions attached to the `choice` question. The default explains agent routing and follow-up handling.
 - `timeoutMs` (optional): Timeout for each request attempt, in milliseconds (Python: `timeout`, in seconds). Defaults to 30 seconds.
-- `maxRetries` (optional): How many times to retry `408`, `429` and `5xx` responses (Python: `max_retries`). Delays follow the `Retry-After` header when present, otherwise exponential backoff from 0.5 s capped at 5 s, which matches the default retry policy of the official SDKs. Defaults to 2. Network errors and timeouts are not retried.
+- `maxRetries` (optional): How many times to retry `408`, `429` and `5xx` responses (Python: `max_retries`). Delays follow the `Retry-After` header when present, otherwise exponential backoff from 0.5 s capped at 5 s, which matches the default retry policy of the official SDKs. If `Retry-After` asks for more than 10 s, the classifier fails fast instead of stalling the routing call. Defaults to 2. Network errors and timeouts are not retried.
+- `maxHistoryMessages` (optional): How many of the most recent history messages are sent to Jev (Python: `max_history_messages`). Defaults to 20 (10 exchanges); `null` (Python: `None`) sends the full history, and `0` sends none. See [Limitations](#limitations) for why the history is bounded.
 - `callbacks` (optional): `ClassifierCallbacks` invoked at classification start and stop. The stop callback also receives the token `usage`.
 
-The Python option names follow snake_case (`model_id`, `api_key`, `base_url`, `instructions`, `timeout`, `max_retries`, `callbacks`) and are passed via `JevClassifierOptions`.
+The Python option names follow snake_case (`model_id`, `api_key`, `base_url`, `instructions`, `timeout`, `max_retries`, `max_history_messages`, `callbacks`) and are passed via `JevClassifierOptions`.
 
 ## Customizing the state
 
@@ -236,7 +243,7 @@ Errors are logged and re-thrown so the orchestrator can handle them:
 - **Reserved agent id**: an agent whose id is `unknown` clashes with the built-in "no match" option, so `processRequest` throws before any network call.
 - **HTTP 401**: missing or invalid API key.
 - **HTTP 422**: the request failed validation, for example a state over the context limit. The error message includes the response body with the offending field.
-- **HTTP 429 / 529 / 5xx**: retried up to `maxRetries` times, then thrown with the status and response body.
+- **HTTP 429 / 529 / 5xx**: retried up to `maxRetries` times, then thrown with the status and response body. A `Retry-After` longer than 10 s is thrown immediately.
 - **Timeout**: each attempt is aborted after `timeoutMs` and a timeout error is thrown.
 - **Malformed response**: if no valid `choice` answer is present, an error is thrown rather than a default result returned.
 
@@ -297,7 +304,7 @@ For integration testing without spending credits, point `baseUrl` at a local stu
 3. **Write literal, non-overlapping agent descriptions**: they are the criteria Jev decides between, and Jev [reads them literally](https://docs.typesafe.ai/model-jaggedness/jev-1.13#literal-reading). State boundary cases explicitly (e.g. "refund requests, including double charges") rather than relying on implied intent.
 4. **Keep instructions and descriptions consistent**: [contradictions between the instructions and the criteria](https://docs.typesafe.ai/model-jaggedness/jev-1.13#contradictory-instructions-and-criteria) reduce accuracy.
 5. **Use the confidence**: see [Using the confidence](#using-the-confidence).
-6. **Bound the history**: lower `MAX_MESSAGE_PAIRS_PER_AGENT` in the orchestrator config for long-running sessions (see [Limitations](#limitations)).
+6. **Bound the history**: the default `maxHistoryMessages` of 20 is enough for follow-ups that answer a question from a few turns back. Raise it only if your agents' questions stay open longer (see [Limitations](#limitations)).
 
 ## Limitations
 
@@ -305,7 +312,7 @@ These limits were checked against the official TypeSafe documentation for `jev-1
 
 - **Hosted API only**: Jev is not open-weight and runs only on TypeSafe's servers. Every classification sends the conversation history and the user input to TypeSafe. Review [data handling](https://docs.typesafe.ai/models#data-handling) and the [legal documents](https://docs.typesafe.ai/legal) (including zero data retention for enterprise customers) before routing sensitive conversations.
 - **At most 254 agents**: a `choice` question accepts at most [255 options](https://docs.typesafe.ai/api#choice), and one is reserved for `unknown`. The agent id `unknown` itself is also reserved.
-- **Context length**: a request is limited to [64k tokens, and the state plus the longest question to 32k tokens](https://docs.typesafe.ai/models). The orchestrator passes the full session history across all agents (up to `MAX_MESSAGE_PAIRS_PER_AGENT` pairs per agent, 100 by default), and the classifier does not truncate it, so long sessions can exceed the limit and fail with a `422`. Accuracy also [drops as the state grows](https://docs.typesafe.ai/model-jaggedness/jev-1.13#large-state-full-of-irrelevant-detail) long before that.
+- **Context length**: a request is limited to [64k tokens, and the state plus the longest question to 32k tokens](https://docs.typesafe.ai/models). The classifier sends only the last `maxHistoryMessages` messages (20 by default) of the session history, which keeps typical sessions well within the limit. Very long individual messages, or a raised or disabled `maxHistoryMessages`, can still exceed it and fail with a `422`. Accuracy also [drops as the state grows](https://docs.typesafe.ai/model-jaggedness/jev-1.13#large-state-full-of-irrelevant-detail) long before that.
 - **Rate limits**: currently [250,000 tokens per second and 1,200 requests per minute](https://docs.typesafe.ai/models), and TypeSafe says these limits are adjusting dynamically. The classifier retries `429`s, but sustained traffic above the limit will still fail.
 - **Text only, English first**: the state must be text; images, audio and video are not supported. English is the primary training language, and other languages, including CJK scripts, [are handled less accurately](https://docs.typesafe.ai/models#language-support).
 - **Susceptible to adversarial input**: the user input becomes part of the state, and Jev does [not treat state as hostile](https://docs.typesafe.ai/model-jaggedness/jev-1.13#adversarial-content). A crafted message can steer the routing decision. Don't use the classifier as a security boundary, and test edge cases before deploying.

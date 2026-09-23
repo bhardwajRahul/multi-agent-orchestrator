@@ -10,7 +10,7 @@ from agent_squad.utils.logger import Logger
 from agent_squad.classifiers import Classifier, ClassifierResult, ClassifierCallbacks
 
 # Official TypeSafe System One endpoint: https://docs.typesafe.ai/api
-JEV_DECISION_API_URL = "https://api.typesafe.ai/v1/systemone"
+JEV_API_URL = "https://api.typesafe.ai/v1/systemone"
 JEV_MODEL_ID_LATEST = "jev-latest"
 
 # Environment variable read when no api_key is passed, as in the official TypeSafe SDKs.
@@ -28,6 +28,12 @@ MAX_CHOICE_CRITERIA = 255
 RETRYABLE_STATUSES = frozenset({408, 429, *range(500, 600)})
 BACKOFF_INITIAL_SECONDS = 0.5
 BACKOFF_MAX_SECONDS = 5.0
+# A Retry-After longer than this fails fast instead of stalling the routing call.
+MAX_RETRY_AFTER_SECONDS = 10.0
+
+# The most recent messages kept as history. Jev's state (plus the longest
+# question) is limited to 32k tokens, and accuracy drops as it grows.
+DEFAULT_MAX_HISTORY_MESSAGES = 20
 
 DEFAULT_INSTRUCTIONS = f"""Select the single agent best equipped to handle the current user input.
 
@@ -54,6 +60,7 @@ class JevClassifierOptions:
                  instructions: Optional[str] = None,
                  timeout: float = 30.0,
                  max_retries: int = 2,
+                 max_history_messages: Optional[int] = DEFAULT_MAX_HISTORY_MESSAGES,
                  callbacks: Optional[ClassifierCallbacks] = None):
         # model_id: e.g. "jev-latest" or a pinned version like "jev-1.13.0".
         # Pin a version in production so decision thresholds don't shift.
@@ -67,6 +74,8 @@ class JevClassifierOptions:
         self.timeout = timeout
         # Retries on 408, 429 and 5xx responses, with exponential backoff.
         self.max_retries = max_retries
+        # Only the most recent messages are sent; None keeps the full history.
+        self.max_history_messages = max_history_messages
         self.callbacks = callbacks or ClassifierCallbacks()
 
 
@@ -94,10 +103,13 @@ class JevClassifier(Classifier):
 
         self.api_key = api_key
         self.model_id = options.model_id or JEV_MODEL_ID_LATEST
-        self.base_url = options.base_url or JEV_DECISION_API_URL
+        self.base_url = options.base_url or JEV_API_URL
         self.instructions = options.instructions or DEFAULT_INSTRUCTIONS
         self.timeout = options.timeout
         self.max_retries = max(0, options.max_retries)
+        self.max_history_messages = (
+            None if options.max_history_messages is None else max(0, options.max_history_messages)
+        )
         self.callbacks = options.callbacks
         self.prompt_template = DEFAULT_PROMPT_TEMPLATE
 
@@ -106,6 +118,13 @@ class JevClassifier(Classifier):
         # Full parsed body of the most recent successful response, including
         # the versioned model id that answered.
         self._last_response: Optional[dict[str, Any]] = None
+
+    async def classify(self,
+                       input_text: str,
+                       chat_history: List[ConversationMessage]) -> ClassifierResult:
+        if self.max_history_messages is not None:
+            chat_history = chat_history[-self.max_history_messages:] if self.max_history_messages else []
+        return await super().classify(input_text, chat_history)
 
     def get_last_usage(self) -> Optional[dict[str, Any]]:
         """Token usage Jev reported for the most recent decision."""
@@ -164,12 +183,14 @@ class JevClassifier(Classifier):
         )
 
     @staticmethod
-    def _retry_delay(error: urllib.error.HTTPError, attempt: int) -> float:
+    def _retry_delay(error: urllib.error.HTTPError, attempt: int) -> Optional[float]:
+        """Seconds to wait before retrying, or None when Retry-After asks for too long."""
         retry_after = error.headers.get("retry-after") if error.headers else None
         try:
-            return max(0.0, float(retry_after))
+            delay = max(0.0, float(retry_after))
         except (TypeError, ValueError):
             return min(BACKOFF_INITIAL_SECONDS * 2 ** attempt, BACKOFF_MAX_SECONDS)
+        return delay if delay <= MAX_RETRY_AFTER_SECONDS else None
 
     def _post(self, request: urllib.request.Request) -> Any:
         """Sends one request attempt. Blocking, so it runs in a worker thread."""
@@ -202,8 +223,9 @@ class JevClassifier(Classifier):
             try:
                 return await asyncio.to_thread(self._post, request)
             except urllib.error.HTTPError as error:
-                if error.code in RETRYABLE_STATUSES and attempt < self.max_retries:
-                    await asyncio.sleep(self._retry_delay(error, attempt))
+                delay = self._retry_delay(error, attempt)
+                if error.code in RETRYABLE_STATUSES and attempt < self.max_retries and delay is not None:
+                    await asyncio.sleep(delay)
                     attempt += 1
                     continue
                 raise ValueError(self._describe_http_error(error)) from error
