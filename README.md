@@ -159,7 +159,7 @@ Route with a decision model instead of an LLM. `JevClassifier` sends your agents
 - 🎯 **Built-in `unknown` option** — out-of-scope requests return no agent instead of a forced match, and the calibrated confidence is meaningful to threshold.
 - 🔌 **One-line drop-in** — `new AgentSquad({ classifier: new JevClassifier() })` / `AgentSquad(classifier=JevClassifier())` with `TYPESAFE_API_KEY` set.
 
-[Learn more about JevClassifier →](https://2fastlabs.github.io/agent-squad/classifiers/built-in/jev-classifier) — or run the [side-by-side latency & cost comparison vs an LLM classifier](examples/jev-demo/typescript).
+[Learn more about JevClassifier →](https://2fastlabs.github.io/agent-squad/classifiers/built-in/jev-classifier) — or run the side-by-side latency & cost comparison vs an LLM classifier in [TypeScript](examples/jev-demo/typescript) or [Python](examples/jev-demo/python).
 
 ## SupervisorAgent — team coordination
 

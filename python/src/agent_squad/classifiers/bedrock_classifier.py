@@ -97,7 +97,9 @@ class BedrockClassifier(Classifier):
 
         converse_cmd = {
             "modelId": self.model_id,
-            "messages": [user_message.__dict__],
+            # Converse rejects unknown keys, so don't send ConversationMessage.__dict__
+            # (it carries a `citations` attribute).
+            "messages": [{"role": user_message.role, "content": user_message.content}],
             "system": [{"text": self.system_prompt}],
             "toolConfig": toolConfig,
             "inferenceConfig": {

@@ -1,0 +1,3 @@
+# JevClassifier is not on PyPI yet: install agent-squad from this repository,
+# with the aws extra for the Bedrock agents and classifier.
+-e ../../../python[aws]

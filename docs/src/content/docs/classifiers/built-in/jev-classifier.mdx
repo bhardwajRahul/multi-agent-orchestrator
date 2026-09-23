@@ -244,20 +244,35 @@ See the [API reference](https://docs.typesafe.ai/api#errors) for the full list o
 
 ## Examples
 
-Two runnable examples live in `examples/jev-demo/typescript/`:
+The same two runnable examples exist in both runtimes, under `examples/jev-demo/typescript/` and `examples/jev-demo/python/`:
 
-- `jevClassifierDemo.ts` routes queries across four domain agents (tech support, billing, travel, wellness) backed by Amazon Bedrock. Scripted mode classifies a fixed set of queries; `--interactive` starts a multi-turn conversation where follow-ups are routed using the growing history, with an estimated per-turn cost and a session total.
-- `jevVsBedrockClassifierDemo.ts` runs the same context-switching conversation through `JevClassifier` and `BedrockClassifier` side by side and reports per-turn agent choice, confidence, latency and cost, plus a summary with the relative latency and cost difference.
+- **Routing demo** (`jevClassifierDemo.ts` / `jev_classifier_demo.py`) routes queries across four domain agents (tech support, billing, travel, wellness) backed by Amazon Bedrock. Scripted mode classifies a fixed set of queries; `--interactive` starts a multi-turn conversation where follow-ups are routed using the growing history, with an estimated per-turn cost and a session total.
+- **Comparison demo** (`jevVsBedrockClassifierDemo.ts` / `jev_vs_bedrock_classifier_demo.py`) runs the same context-switching conversation through `JevClassifier` and `BedrockClassifier` side by side and reports per-turn agent choice, confidence, latency and cost, plus a summary with the relative latency and cost difference.
 
-```bash
-cd examples/jev-demo/typescript
-npm install
-export TYPESAFE_API_KEY=...
-npm run demo:interactive   # multi-turn routing demo (needs AWS credentials for agent replies)
-npm run compare            # Jev vs Bedrock comparison (needs AWS credentials)
-```
+Both need `TYPESAFE_API_KEY`, plus AWS credentials with Bedrock access for the agent replies (interactive mode) and for the Bedrock classifier (comparison).
 
-Both demos estimate Jev's cost from `input_tokens` at the official rate. Set `JEV_USD_PER_MTOK` to override it, and `JEV_API_URL` to target a different endpoint.
+<Tabs syncKey="runtime">
+  <TabItem label="TypeScript" icon="seti:typescript" color="blue">
+    ```bash
+    cd examples/jev-demo/typescript
+    npm install
+    export TYPESAFE_API_KEY=...
+    npm run demo:interactive   # multi-turn routing demo
+    npm run compare            # Jev vs Bedrock comparison
+    ```
+  </TabItem>
+  <TabItem label="Python" icon="seti:python">
+    ```bash
+    cd examples/jev-demo/python
+    pip install -r requirements.txt   # installs agent-squad from this repository
+    export TYPESAFE_API_KEY=...
+    python jev_classifier_demo.py --interactive   # multi-turn routing demo
+    python jev_vs_bedrock_classifier_demo.py      # Jev vs Bedrock comparison
+    ```
+  </TabItem>
+</Tabs>
+
+The demos estimate Jev's cost from `input_tokens` at the official rate. Set `JEV_USD_PER_MTOK` to override it, and `JEV_API_URL` to target a different endpoint.
 
 ## Testing
 
