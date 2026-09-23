@@ -145,6 +145,10 @@ class BedrockLLMAgent(Agent):
         if "topP" in self.inference_config:
             inference_config["topP"] = self.inference_config["topP"]
 
+        # A value set to None is left out, for models that reject sampling
+        # parameters (e.g. {"temperature": None, "topP": None} for Claude Opus 5).
+        inference_config = {key: value for key, value in inference_config.items() if value is not None}
+
         command = {
             "modelId": self.model_id,
             "messages": conversation_to_dict(conversation),

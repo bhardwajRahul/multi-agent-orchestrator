@@ -1,0 +1,324 @@
+---
+title: Jev Classifier
+description: How to configure the Jev classifier, backed by TypeSafe's Jev System One API
+---
+
+The Jev Classifier is a built-in classifier for the Agent Squad that uses [Jev](https://docs.typesafe.ai/introduction), TypeSafe AI's System One decision model, for intent classification. Unlike the model-backed classifiers (Bedrock, Anthropic, OpenAI), Jev is a decision model: instead of generating text or a tool call that has to be parsed, it returns a typed decision (the winning agent label plus a calibrated confidence) directly.
+
+The Jev Classifier extends the abstract `Classifier` class and sends the registered agents as the options of a Jev [`choice` question](https://docs.typesafe.ai/primitives/choice).
+
+**Official Jev documentation:** [Introduction](https://docs.typesafe.ai/introduction) · [Quick start](https://docs.typesafe.ai/introduction/quickstart) · [API reference](https://docs.typesafe.ai/api) · [Models, pricing & limits](https://docs.typesafe.ai/models) · [Confidence](https://docs.typesafe.ai/confidence) · [Intent routing pattern](https://docs.typesafe.ai/patterns/intent-routing) · [Known failure modes (jev-1.13)](https://docs.typesafe.ai/model-jaggedness/jev-1.13)
+
+## Available in TypeScript and Python
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The Jev Classifier ships in **both runtimes** with identical behavior, identical defaults, and matching test suites. Neither needs extra dependencies: TypeScript uses the built-in `fetch`, and Python uses only the standard library. Set `TYPESAFE_API_KEY` and it replaces the default classifier in one line:
+
+<Tabs syncKey="runtime">
+  <TabItem label="TypeScript" icon="seti:typescript" color="blue">
+    ```typescript
+    import { AgentSquad, JevClassifier } from "agent-squad";
+
+    const orchestrator = new AgentSquad({
+      classifier: new JevClassifier(),
+    });
+    ```
+    Exported from the `agent-squad` package; tested in
+    `typescript/tests/classifiers/JevClassifier.test.ts`.
+  </TabItem>
+  <TabItem label="Python" icon="seti:python">
+    ```python
+    from agent_squad.classifiers import JevClassifier
+    from agent_squad.orchestrator import AgentSquad
+
+    orchestrator = AgentSquad(classifier=JevClassifier())
+    ```
+    Always importable from `agent_squad.classifiers` (no extras needed);
+    tested in `python/src/tests/classifiers/test_jev_classifier.py`.
+  </TabItem>
+</Tabs>
+
+Everything documented on this page (options, `unknown` handling, retries, usage exposure, error messages) applies to both implementations. Only the naming convention differs: `modelId`/`timeoutMs`/`maxRetries`/`maxHistoryMessages` in TypeScript, `model_id`/`timeout`/`max_retries`/`max_history_messages` in Python.
+
+## How it works
+
+On each classification request, the classifier:
+
+1. Builds a `choice` question whose criteria map each **agent ID** to its **description**, plus a reserved `unknown` option for requests that no agent fits.
+2. Sends the conversation history as the decision [`state`](https://docs.typesafe.ai/concepts/state), with the current user input appended. The agent descriptions travel only once, as the criteria, which keeps the state small.
+3. Calls `POST https://api.typesafe.ai/v1/systemone`, the official [System One endpoint](https://docs.typesafe.ai/api).
+4. Maps the returned choice back to the agent and returns a `ClassifierResult` with Jev's calibrated confidence. The `unknown` choice maps to `selectedAgent: null`, which the orchestrator handles as "no agent matched".
+
+Because the response type is fixed by the request, there is no free-text parsing and no risk of a malformed agent name.
+
+## Features
+
+- Typed `choice` decisions with [calibrated confidence](https://docs.typesafe.ai/confidence), with no tool-call or text parsing
+- Low latency and low cost compared to LLM-based classification: you pay for input tokens only, and output tokens are free (see [current pricing](https://docs.typesafe.ai/models))
+- Uses the conversation history to route short follow-ups ("yes", "tell me more") in context
+- Built-in `unknown` option so out-of-scope requests return no agent instead of a forced match
+- Automatic retries with exponential backoff on `429 Too Many Requests`, `529 Overloaded` and other transient errors, as the [API reference](https://docs.typesafe.ai/api#handling-rate-limits) recommends
+- Configurable per-attempt request timeout
+- Exposes per-decision token usage and the raw API response for billing and debugging
+
+## Basic usage
+
+Get an API key from TypeSafe (see the [Quick start](https://docs.typesafe.ai/introduction/quickstart)) and put it in the `TYPESAFE_API_KEY` environment variable, the same one the official TypeSafe SDKs read. Never hard-code the key.
+
+<Tabs syncKey="runtime">
+  <TabItem label="TypeScript" icon="seti:typescript" color="blue">
+    ```typescript
+    import { AgentSquad, JevClassifier } from "agent-squad";
+
+    const jevClassifier = new JevClassifier();
+
+    const orchestrator = new AgentSquad({ classifier: jevClassifier });
+    ```
+  </TabItem>
+  <TabItem label="Python" icon="seti:python">
+    ```python
+    from agent_squad.classifiers import JevClassifier
+    from agent_squad.orchestrator import AgentSquad
+
+    jev_classifier = JevClassifier()
+
+    orchestrator = AgentSquad(classifier=jev_classifier)
+    ```
+  </TabItem>
+</Tabs>
+
+With no options, the classifier reads the key from the environment, uses the `jev-latest` model, and calls the official TypeSafe endpoint.
+
+## Custom configuration
+
+<Tabs syncKey="runtime">
+  <TabItem label="TypeScript" icon="seti:typescript" color="blue">
+    ```typescript
+    const jevClassifier = new JevClassifier({
+      // Pin a model version in production so decision thresholds don't shift.
+      modelId: "jev-1.13.0",
+
+      // Explicit key takes precedence over the TYPESAFE_API_KEY environment variable.
+      apiKey: process.env.MY_TYPESAFE_KEY,
+
+      // Point at a gateway or a compatible endpoint instead, or at a stub in tests.
+      baseUrl: "https://api.typesafe.ai/v1/systemone",
+
+      // Replace the routing instructions sent with the choice question.
+      instructions: "Select the single agent best equipped to handle the request...",
+
+      // Abort each attempt after this many milliseconds. Defaults to 30000.
+      timeoutMs: 10000,
+
+      // Retries on 408, 429 and 5xx responses. Defaults to 2; 0 disables retries.
+      maxRetries: 2,
+
+      // Only the most recent messages of the history are sent. Defaults to 20; null keeps all.
+      maxHistoryMessages: 20,
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python" icon="seti:python">
+    ```python
+    import os
+    from agent_squad.classifiers import JevClassifier, JevClassifierOptions
+
+    jev_classifier = JevClassifier(JevClassifierOptions(
+        # Pin a model version in production so decision thresholds don't shift.
+        model_id="jev-1.13.0",
+
+        # Explicit key takes precedence over the TYPESAFE_API_KEY environment variable.
+        api_key=os.environ["MY_TYPESAFE_KEY"],
+
+        # Point at a gateway or a compatible endpoint instead, or at a stub in tests.
+        base_url="https://api.typesafe.ai/v1/systemone",
+
+        # Replace the routing instructions sent with the choice question.
+        instructions="Select the single agent best equipped to handle the request...",
+
+        # Abort each attempt after this many seconds. Defaults to 30.0.
+        timeout=10.0,
+
+        # Retries on 408, 429 and 5xx responses. Defaults to 2; 0 disables retries.
+        max_retries=2,
+
+        # Only the most recent messages of the history are sent. Defaults to 20; None keeps all.
+        max_history_messages=20,
+    ))
+    ```
+  </TabItem>
+</Tabs>
+
+The `JevClassifier` accepts the following options:
+
+- `apiKey` (optional): TypeSafe API key. Falls back to the `TYPESAFE_API_KEY` environment variable; the constructor throws if neither is set. The key is only ever sent in the `Authorization` header and is never logged.
+- `modelId` (optional): Jev model to use, e.g. `jev-latest` (default) or a pinned version like `jev-1.13.0`. See [Models](https://docs.typesafe.ai/models#aliases) for the available versions and aliases.
+- `baseUrl` (optional): System One endpoint. Defaults to `https://api.typesafe.ai/v1/systemone`. Any endpoint that implements the same request and response schema works.
+- `instructions` (optional): The instructions attached to the `choice` question. The default explains agent routing and follow-up handling.
+- `timeoutMs` (optional): Timeout for each request attempt, in milliseconds (Python: `timeout`, in seconds). Defaults to 30 seconds.
+- `maxRetries` (optional): How many times to retry `408`, `429` and `5xx` responses (Python: `max_retries`). Delays follow the `Retry-After` header when present, otherwise exponential backoff from 0.5 s capped at 5 s, which matches the default retry policy of the official SDKs. If `Retry-After` asks for more than 10 s, the classifier fails fast instead of stalling the routing call. Defaults to 2. Network errors and timeouts are not retried.
+- `maxHistoryMessages` (optional): How many of the most recent history messages are sent to Jev (Python: `max_history_messages`). Defaults to 20 (10 exchanges); `null` (Python: `None`) sends the full history, and `0` sends none. See [Limitations](#limitations) for why the history is bounded.
+- `callbacks` (optional): `ClassifierCallbacks` invoked at classification start and stop. The stop callback also receives the token `usage`.
+
+The Python option names follow snake_case (`model_id`, `api_key`, `base_url`, `instructions`, `timeout`, `max_retries`, `max_history_messages`, `callbacks`) and are passed via `JevClassifierOptions`.
+
+## Customizing the state
+
+By default the decision `state` is just the conversation history:
+
+```text
+<conversation_history>
+{{HISTORY}}
+</conversation_history>
+
+<current_user_input>
+...
+</current_user_input>
+```
+
+It deliberately does not reuse the long LLM-oriented prompt of the other classifiers. Jev loses accuracy when the state is [full of detail unrelated to the decision](https://docs.typesafe.ai/model-jaggedness/jev-1.13#large-state-full-of-irrelevant-detail), and the agent descriptions already reach Jev as the choice criteria.
+
+You can still replace the template, for example to add business context. The current user input is always appended after it:
+
+```typescript
+orchestrator.classifier.setSystemPrompt(
+  `
+  <business_context>{{CUSTOM_PLACEHOLDER}}</business_context>
+  <conversation_history>
+  {{HISTORY}}
+  </conversation_history>
+  `,
+  {
+    CUSTOM_PLACEHOLDER: "We are an airline; baggage questions go to the travel agent.",
+  }
+);
+```
+
+Keep the state focused. Put the domain rules and boundary cases in the agent descriptions and in `instructions`, which is where [TypeSafe recommends](https://docs.typesafe.ai/concepts/how-to-build-with-system-one) encoding them.
+
+## Using the confidence
+
+The orchestrator routes to whichever agent Jev chose, whatever the confidence. Because Jev's confidence is [calibrated](https://docs.typesafe.ai/confidence), thresholding it is meaningful, as in TypeSafe's [confidence-gated routing](https://docs.typesafe.ai/patterns/confidence-routing) pattern. To fall back below a threshold, wrap the classifier:
+
+```typescript
+class GatedJevClassifier extends JevClassifier {
+  async processRequest(inputText: string, chatHistory: ConversationMessage[]) {
+    const result = await super.processRequest(inputText, chatHistory);
+    // Below 0.5, treat the request as unmatched (default agent or "no agent" message).
+    return result.confidence < 0.5 ? { selectedAgent: null, confidence: result.confidence } : result;
+  }
+}
+```
+
+Tune the threshold against your own traffic, and re-tune it when you change the pinned model version.
+
+## Usage and billing information
+
+After each decision, the classifier exposes what the API reported:
+
+```typescript
+const result = await jevClassifier.classify(userInput, chatHistory);
+
+// Token usage, as documented in the API reference: { input_tokens, output_tokens }.
+const usage = jevClassifier.getLastUsage();
+
+// The full parsed response body, including the versioned `model` that answered
+// (e.g. "jev-1.13.0" when you sent "jev-latest"), which is useful to log.
+const raw = jevClassifier.getLastResponse();
+
+// The API reports tokens, not dollars. Only input tokens are billed; take the
+// current rate from https://docs.typesafe.ai/models.
+const costUsd = ((usage?.input_tokens ?? 0) * USD_PER_MILLION_INPUT_TOKENS) / 1_000_000;
+```
+
+The Python classifier exposes the same information via `get_last_usage()` and `get_last_response()`.
+
+## Error handling
+
+Errors are logged and re-thrown so the orchestrator can handle them:
+
+- **Missing API key**: the constructor throws immediately.
+- **No agents registered**: `processRequest` throws before any network call if `setAgents` was never called.
+- **Reserved agent id**: an agent whose id is `unknown` clashes with the built-in "no match" option, so `processRequest` throws before any network call.
+- **HTTP 401**: missing or invalid API key.
+- **HTTP 422**: the request failed validation, for example a state over the context limit. The error message includes the response body with the offending field.
+- **HTTP 429 / 529 / 5xx**: retried up to `maxRetries` times, then thrown with the status and response body. A `Retry-After` longer than 10 s is thrown immediately.
+- **Timeout**: each attempt is aborted after `timeoutMs` and a timeout error is thrown.
+- **Malformed response**: if no valid `choice` answer is present, an error is thrown rather than a default result returned.
+
+See the [API reference](https://docs.typesafe.ai/api#errors) for the full list of status codes.
+
+## Examples
+
+The same two runnable examples exist in both runtimes, under `examples/jev-demo/typescript/` and `examples/jev-demo/python/`:
+
+- **Routing demo** (`jevClassifierDemo.ts` / `jev_classifier_demo.py`) routes queries across four domain agents (tech support, billing, travel, wellness) backed by Amazon Bedrock. Scripted mode classifies a fixed set of queries; `--interactive` starts a multi-turn conversation where follow-ups are routed using the growing history, with an estimated per-turn cost and a session total.
+- **Comparison demo** (`jevVsBedrockClassifierDemo.ts` / `jev_vs_bedrock_classifier_demo.py`) runs the same context-switching conversation through `JevClassifier` and `BedrockClassifier` side by side and reports per-turn agent choice, confidence, latency and cost, plus a summary with the relative latency and cost difference.
+
+Both need `TYPESAFE_API_KEY`, plus AWS credentials with Bedrock access for the agent replies (interactive mode) and for the Bedrock classifier (comparison).
+
+<Tabs syncKey="runtime">
+  <TabItem label="TypeScript" icon="seti:typescript" color="blue">
+    ```bash
+    cd examples/jev-demo/typescript
+    npm install
+    export TYPESAFE_API_KEY=...
+    npm run demo:interactive   # multi-turn routing demo
+    npm run compare            # Jev vs Bedrock comparison
+    ```
+  </TabItem>
+  <TabItem label="Python" icon="seti:python">
+    ```bash
+    cd examples/jev-demo/python
+    pip install -r requirements.txt   # installs agent-squad from this repository
+    export TYPESAFE_API_KEY=...
+    python jev_classifier_demo.py --interactive   # multi-turn routing demo
+    python jev_vs_bedrock_classifier_demo.py      # Jev vs Bedrock comparison
+    ```
+  </TabItem>
+</Tabs>
+
+The demos estimate Jev's cost from `input_tokens` at the official rate. Set `JEV_USD_PER_MTOK` to override it, and `JEV_API_URL` to target a different endpoint.
+
+## Testing
+
+The classifier's test suites mock the HTTP layer (`global.fetch` in TypeScript, `urllib.request.urlopen` in Python), so no API key or network access is needed:
+
+```bash
+# TypeScript
+cd typescript
+npx jest tests/classifiers/JevClassifier.test.ts
+
+# Python
+cd python
+pytest src/tests/classifiers/test_jev_classifier.py
+```
+
+For integration testing without spending credits, point `baseUrl` at a local stub server that returns `{ "answers": { "selected_agent": { "type": "choice", "choice": "<agent-id>", "confidence": 0.9 } } }`.
+
+## Best practices
+
+1. **Key security**: keep the key in `TYPESAFE_API_KEY`; never hard-code, log, or commit it.
+2. **Pin the model**: `jev-latest` is an [alias that moves](https://docs.typesafe.ai/models#aliases) when a new release ships. Use a pinned `modelId` (e.g. `jev-1.13.0`) in production so calibrated thresholds don't shift under you.
+3. **Write literal, non-overlapping agent descriptions**: they are the criteria Jev decides between, and Jev [reads them literally](https://docs.typesafe.ai/model-jaggedness/jev-1.13#literal-reading). State boundary cases explicitly (e.g. "refund requests, including double charges") rather than relying on implied intent.
+4. **Keep instructions and descriptions consistent**: [contradictions between the instructions and the criteria](https://docs.typesafe.ai/model-jaggedness/jev-1.13#contradictory-instructions-and-criteria) reduce accuracy.
+5. **Use the confidence**: see [Using the confidence](#using-the-confidence).
+6. **Bound the history**: the default `maxHistoryMessages` of 20 is enough for follow-ups that answer a question from a few turns back. Raise it only if your agents' questions stay open longer (see [Limitations](#limitations)).
+
+## Limitations
+
+These limits were checked against the official TypeSafe documentation for `jev-1.13` (September 2026). Follow the links for the current values.
+
+- **Hosted API only**: Jev is not open-weight and runs only on TypeSafe's servers. Every classification sends the conversation history and the user input to TypeSafe. Review [data handling](https://docs.typesafe.ai/models#data-handling) and the [legal documents](https://docs.typesafe.ai/legal) (including zero data retention for enterprise customers) before routing sensitive conversations.
+- **At most 254 agents**: a `choice` question accepts at most [255 options](https://docs.typesafe.ai/api#choice), and one is reserved for `unknown`. The agent id `unknown` itself is also reserved.
+- **Context length**: a request is limited to [64k tokens, and the state plus the longest question to 32k tokens](https://docs.typesafe.ai/models). The classifier sends only the last `maxHistoryMessages` messages (20 by default) of the session history, which keeps typical sessions well within the limit. Very long individual messages, or a raised or disabled `maxHistoryMessages`, can still exceed it and fail with a `422`. Accuracy also [drops as the state grows](https://docs.typesafe.ai/model-jaggedness/jev-1.13#large-state-full-of-irrelevant-detail) long before that.
+- **Rate limits**: currently [250,000 tokens per second and 1,200 requests per minute](https://docs.typesafe.ai/models), and TypeSafe says these limits are adjusting dynamically. The classifier retries `429`s, but sustained traffic above the limit will still fail.
+- **Text only, English first**: the state must be text; images, audio and video are not supported. English is the primary training language, and other languages, including CJK scripts, [are handled less accurately](https://docs.typesafe.ai/models#language-support).
+- **Susceptible to adversarial input**: the user input becomes part of the state, and Jev does [not treat state as hostile](https://docs.typesafe.ai/model-jaggedness/jev-1.13#adversarial-content). A crafted message can steer the routing decision. Don't use the classifier as a security boundary, and test edge cases before deploying.
+- **Weak at numbers, dates and multi-hop reasoning**: routing rules that depend on [arithmetic, date comparison or several levels of indirection](https://docs.typesafe.ai/model-jaggedness/jev-1.13) should be evaluated in code rather than described in agent descriptions.
+- **Not customizable per account**: Jev is [not fine-tuned on customer data](https://docs.typesafe.ai/models#customizing-jev). You shape its routing only through agent descriptions, `instructions` and the state.
+- **Decides, doesn't generate**: the classifier routes; agent responses come from your agents. Jev [is not trained to generate text](https://docs.typesafe.ai/model-jaggedness/jev-1.13#generation).
+- **No cost in the response**: the API reports [token counts only](https://docs.typesafe.ai/api#response-body); compute the cost from `input_tokens` and the [published rate](https://docs.typesafe.ai/models).
+
+For more information on using and customizing the Agent Squad, refer to the [Classifier Overview](/agent-squad/classifier/overview) and [Agents](/agent-squad/agents/overview) documentation.

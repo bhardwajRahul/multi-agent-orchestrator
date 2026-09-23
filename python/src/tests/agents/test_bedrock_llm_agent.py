@@ -855,3 +855,32 @@ def test_nonempty_tool_config_sets_toolconfig(mock_boto3_client):
     command = agent._build_conversation_command([], "system prompt")
     assert "toolConfig" in command
     assert len(command["toolConfig"]["tools"]) == 1
+
+
+def test_sampling_params_set_to_none_are_omitted(mock_boto3_client):
+    # Models such as Claude Opus 5 reject temperature/topP with a 400.
+    agent = BedrockLLMAgent(BedrockLLMAgentOptions(
+        name="TestAgent",
+        description="A test agent",
+        model_id="test-model",
+        region="us-west-2",
+        inference_config={"maxTokens": 256, "temperature": None, "topP": None},
+    ))
+
+    command = agent._build_conversation_command([], "system prompt")
+
+    assert command["inferenceConfig"] == {"maxTokens": 256, "stopSequences": []}
+
+
+def test_sampling_defaults_are_kept(mock_boto3_client):
+    agent = BedrockLLMAgent(BedrockLLMAgentOptions(
+        name="TestAgent",
+        description="A test agent",
+        model_id="test-model",
+        region="us-west-2",
+    ))
+
+    command = agent._build_conversation_command([], "system prompt")
+
+    assert command["inferenceConfig"]["temperature"] == 0.0
+    assert command["inferenceConfig"]["topP"] == 0.9

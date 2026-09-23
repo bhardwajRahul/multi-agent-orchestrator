@@ -21,10 +21,15 @@ try:
 except Exception as e:
     _OPENAI_AVAILABLE = False
 
+# Stdlib-only, so no availability guard is needed.
+from .jev_classifier import JevClassifier, JevClassifierOptions
+
 __all__ = [
     "Classifier",
     "ClassifierResult",
-    'ClassifierCallbacks'
+    'ClassifierCallbacks',
+    "JevClassifier",
+    "JevClassifierOptions",
 ]
 
 if _AWS_AVAILABLE:

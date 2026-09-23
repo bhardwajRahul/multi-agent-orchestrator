@@ -283,11 +283,14 @@ to the human's communication style.
             'modelId': self.model_id,
             'messages': conversation_to_dict(conversation),
             'system': [{'text': system_prompt}],
+            # A value set to None is left out, for models that reject sampling parameters.
             'inferenceConfig': {
-                'maxTokens': self.inference_config.get('maxTokens'),
-                'temperature': self.inference_config.get('temperature'),
-                'topP': self.inference_config.get('topP'),
-                'stopSequences': self.inference_config.get('stopSequences'),
+                key: value for key, value in {
+                    'maxTokens': self.inference_config.get('maxTokens'),
+                    'temperature': self.inference_config.get('temperature'),
+                    'topP': self.inference_config.get('topP'),
+                    'stopSequences': self.inference_config.get('stopSequences'),
+                }.items() if value is not None
             },
             'toolConfig': {
                     'tools': self.inline_agent_tool,
