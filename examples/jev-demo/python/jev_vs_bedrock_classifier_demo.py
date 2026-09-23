@@ -258,6 +258,9 @@ async def main() -> None:
     bedrock = MeteredBedrockClassifier(BedrockClassifierOptions(
         model_id=BEDROCK_CLASSIFIER_MODEL_ID,
         region=os.environ.get("AWS_REGION") or os.environ.get("REGION"),
+        # Claude Opus 5 / Sonnet 5 reject sampling parameters, so drop the SDK's
+        # temperature/top_p defaults.
+        inference_config={"temperature": None, "top_p": None},
     ))
     bedrock.set_agents(agents_by_id)
 

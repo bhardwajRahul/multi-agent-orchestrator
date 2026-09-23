@@ -41,7 +41,9 @@ def domain_agent(name: str, description: str, role: str) -> BedrockLLMAgent:
         model_id=os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-5"),
         # boto3 only reads AWS_DEFAULT_REGION on its own, so pass AWS_REGION through.
         region=os.environ.get("AWS_REGION"),
-        inference_config={"maxTokens": 1024},
+        # Claude Opus 5 / Sonnet 5 reject sampling parameters, so drop the SDK's
+        # temperature/topP defaults.
+        inference_config={"maxTokens": 1024, "temperature": None, "topP": None},
         custom_system_prompt={
             "template": (
                 f"You are {role} Answer in 2-4 sentences, and when a natural next step "

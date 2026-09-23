@@ -93,7 +93,8 @@ class BedrockTranslatorAgent(Agent):
                     },
                 },
             },
-            'inferenceConfig': self.inference_config
+            # A value set to None is left out, for models that reject sampling parameters.
+            'inferenceConfig': {key: value for key, value in self.inference_config.items() if value is not None}
         }
 
         try:

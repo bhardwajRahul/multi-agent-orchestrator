@@ -95,6 +95,10 @@ class BedrockClassifier(Classifier):
                 },
             }
 
+        # A value set to None is left out, for models that reject sampling
+        # parameters (e.g. {"temperature": None, "top_p": None} for Claude Opus 5).
+        inference_config = {key: value for key, value in self.inference_config.items() if value is not None}
+
         converse_cmd = {
             "modelId": self.model_id,
             # Converse rejects unknown keys, so don't send ConversationMessage.__dict__
@@ -102,24 +106,14 @@ class BedrockClassifier(Classifier):
             "messages": [{"role": user_message.role, "content": user_message.content}],
             "system": [{"text": self.system_prompt}],
             "toolConfig": toolConfig,
-            "inferenceConfig": {
-                "maxTokens": self.inference_config['maxTokens'],
-                "temperature": self.inference_config['temperature'],
-                "topP": self.inference_config['topP'],
-                "stopSequences": self.inference_config['stopSequences'],
-            },
+            "inferenceConfig": inference_config,
         }
 
         try:
             kwargs = {
                 "modelId": self.model_id,
                 "system": self.system_prompt,
-                "inferenceConfig": {
-                    "maxTokens": self.inference_config['maxTokens'],
-                    "temperature": self.inference_config['temperature'],
-                    "topP": self.inference_config['topP'],
-                    "stopSequences": self.inference_config['stopSequences'],
-                },
+                "inferenceConfig": inference_config,
             }
             await self.callbacks.on_classifier_start('on_classifier_start', input_text, **kwargs)
             response = self.client.converse(**converse_cmd)
